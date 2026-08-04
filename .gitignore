@@ -1,0 +1,17 @@
+# OS / editor junk
+.DS_Store
+Thumbs.db
+NUL
+*.log
+*Zone.Identifier
+
+# Misc
+composer-require.log
+
+# Frontend (Next.js)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+
+# Backend has its own .gitignore (vendor/, .env, storage/*, etc.)
