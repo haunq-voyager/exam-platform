@@ -75,7 +75,7 @@ export default function StudentExamsPage() {
         router.push(`/exam/${exam.my_attempt_id}`);
         return;
       }
-      const response = await api.post<{ data: { id: number } }>(`/exams/${exam.id}/attempts`);
+      const response = await api.post<{ data: { id: number } }>(`/exam-sessions/${exam.id}/attempts`);
       router.push(`/exam/${response.data.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Không thể bắt đầu làm bài.");

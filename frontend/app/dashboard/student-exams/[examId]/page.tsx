@@ -52,7 +52,7 @@ export default function StudentExamDetailPage() {
   }, []);
 
   const exam = useMemo(() => exams.find((item) => item.id === examId) ?? null, [exams, examId]);
-  const examAttempts = useMemo(() => attempts.filter((attempt) => attempt.exam_id === examId), [attempts, examId]);
+  const examAttempts = useMemo(() => attempts.filter((attempt) => attempt.exam_session_id === examId), [attempts, examId]);
 
   async function handleStart() {
     if (!exam) return;
@@ -62,7 +62,7 @@ export default function StudentExamDetailPage() {
         router.push(`/exam/${exam.my_attempt_id}`);
         return;
       }
-      const response = await api.post<{ data: { id: number } }>(`/exams/${exam.id}/attempts`);
+      const response = await api.post<{ data: { id: number } }>(`/exam-sessions/${exam.id}/attempts`);
       router.push(`/exam/${response.data.id}`);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Không thể bắt đầu làm bài.");

@@ -1,82 +1,71 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
-import { api, ApiError } from "../../../lib/api-client";
-import type { Subject, Topic } from "../../../lib/types";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { api } from "../../../lib/api-client";
+import { DataTable } from "../../../components/DataTable";
+import { ConfirmDialog } from "../../../components/ConfirmDialog";
+import { metaOf, type PaginatedResponse } from "../../../lib/pagination";
+import { useToast } from "../../../lib/toast";
+import type { Subject } from "../../../lib/types";
 
 export default function SubjectsPage() {
+  const router = useRouter();
+  const { showToast } = useToast();
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
+  const [meta, setMeta] = useState({ current_page: 1, per_page: 15, total: 0 });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<Subject | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const [subjectName, setSubjectName] = useState("");
-  const [subjectDescription, setSubjectDescription] = useState("");
-
-  const [topicSubjectId, setTopicSubjectId] = useState<number | null>(null);
-  const [topicName, setTopicName] = useState("");
-  const [topicDescription, setTopicDescription] = useState("");
-
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [subjectsResponse, topicsResponse] = await Promise.all([
-        api.get<{ data: Subject[] }>("/subjects"),
-        api.get<{ data: Topic[] }>("/topics")
-      ]);
-      setSubjects(subjectsResponse.data);
-      setTopics(topicsResponse.data);
-      if (!topicSubjectId && subjectsResponse.data.length > 0) {
-        setTopicSubjectId(subjectsResponse.data[0].id);
-      }
+      const response = await api.get<PaginatedResponse<Subject>>("/subjects", { search, page, per_page: 15 });
+      setSubjects(response.data);
+      setMeta(metaOf(response));
     } finally {
       setLoading(false);
     }
-  }
+  }, [search, page]);
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [load]);
 
-  async function handleCreateSubject(event: React.FormEvent) {
-    event.preventDefault();
-    setError(null);
+  async function handleDelete(subject: Subject) {
+    setIsDeleting(true);
     try {
-      await api.post("/subjects", { name: subjectName, description: subjectDescription || null });
-      setSubjectName("");
-      setSubjectDescription("");
+      await api.delete(`/subjects/${subject.id}`);
+      showToast(`Đã xoá môn học "${subject.name}".`);
+      setDeleteTarget(null);
       await load();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Không thể tạo môn học.");
+    } catch {
+      showToast("Không thể xoá môn học.", "error");
+    } finally {
+      setIsDeleting(false);
     }
   }
 
-  async function handleCreateTopic(event: React.FormEvent) {
-    event.preventDefault();
-    setError(null);
-    if (!topicSubjectId) return;
+  async function handleBulkDelete() {
+    setIsDeleting(true);
     try {
-      await api.post("/topics", { subject_id: topicSubjectId, name: topicName, description: topicDescription || null });
-      setTopicName("");
-      setTopicDescription("");
+      await Promise.all(Array.from(selectedIds).map((id) => api.delete(`/subjects/${id}`)));
+      showToast(`Đã xoá ${selectedIds.size} môn học.`);
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
       await load();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Không thể tạo chủ đề.");
+    } catch {
+      showToast("Không thể xoá một số môn học.", "error");
+    } finally {
+      setIsDeleting(false);
     }
-  }
-
-  async function handleDeleteSubject(subject: Subject) {
-    if (!confirm(`Xóa môn học "${subject.name}"? Các chủ đề liên quan cũng sẽ bị xóa.`)) return;
-    await api.delete(`/subjects/${subject.id}`);
-    await load();
-  }
-
-  async function handleDeleteTopic(topic: Topic) {
-    if (!confirm(`Xóa chủ đề "${topic.name}"?`)) return;
-    await api.delete(`/topics/${topic.id}`);
-    await load();
   }
 
   return (
@@ -84,104 +73,96 @@ export default function SubjectsPage() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Ngân hàng câu hỏi</p>
-          <h1>Môn học & chủ đề</h1>
+          <h1>Môn học</h1>
         </div>
+        <button className="primaryButton" onClick={() => router.push("/dashboard/subjects/new")}>
+          <Plus size={18} />
+          Tạo môn học
+        </button>
       </header>
 
-      {error ? <div className="formError" style={{ marginBottom: 14 }}>{error}</div> : null}
+      <div className="toolbar">
+        <label className="searchField">
+          <Search size={17} />
+          <input
+            value={search}
+            onChange={(event) => {
+              setPage(1);
+              setSearch(event.target.value);
+            }}
+            placeholder="Tìm môn học..."
+          />
+        </label>
+      </div>
 
-      <section className="contentGrid">
-        <article className="panel">
-          <div className="panelHeader">
-            <div>
-              <p className="eyebrow">Môn học</p>
-              <h2>Danh sách môn học</h2>
-            </div>
-          </div>
-          <form onSubmit={handleCreateSubject} className="controlRow" style={{ flexWrap: "wrap" }}>
-            <label className="field wide">
-              <span>Tên môn học</span>
-              <input value={subjectName} onChange={(event) => setSubjectName(event.target.value)} required />
-            </label>
-            <label className="field wide">
-              <span>Mô tả</span>
-              <input value={subjectDescription} onChange={(event) => setSubjectDescription(event.target.value)} />
-            </label>
-            <button className="primaryButton" type="submit">
-              <Plus size={16} />
-              Thêm
-            </button>
-          </form>
-
-          {loading ? (
-            <div className="emptyState">Đang tải...</div>
-          ) : (
-            <div className="questionList">
-              {subjects.map((subject) => (
-                <div className="questionItem" key={subject.id}>
-                  <div>
-                    <strong>{subject.name}</strong>
-                    <span>{subject.description ?? "Không có mô tả"} · {subject.topics_count ?? 0} chủ đề</span>
-                  </div>
-                  <button className="linkButton" onClick={() => handleDeleteSubject(subject)}>
+      <section className="panel">
+        <DataTable
+          rows={subjects}
+          rowKey={(row) => row.id}
+          loading={loading}
+          emptyMessage="Chưa có môn học nào."
+          pagination={{ page: meta.current_page, perPage: meta.per_page, total: meta.total, onPageChange: setPage }}
+          selection={{
+            selectedIds,
+            getId: (row) => row.id,
+            onToggle: (id) =>
+              setSelectedIds((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              }),
+            onToggleAll: (checked) => setSelectedIds(checked ? new Set(subjects.map((row) => row.id)) : new Set()),
+            bulkActions: (
+              <button className="dangerButton" onClick={() => setBulkDeleteOpen(true)}>
+                <Trash2 size={16} />
+                Xoá đã chọn
+              </button>
+            )
+          }}
+          columns={[
+            { key: "name", header: "Tên môn học", render: (row) => <strong>{row.name}</strong> },
+            { key: "description", header: "Mô tả", render: (row) => row.description ?? "—" },
+            { key: "topics_count", header: "Số chủ đề", render: (row) => row.topics_count ?? 0 },
+            {
+              key: "actions",
+              header: "",
+              render: (row) => (
+                <div className="controlRow" style={{ margin: 0, justifyContent: "flex-end" }}>
+                  <Link className="iconButton" href={`/dashboard/subjects/${row.id}/edit`} title="Sửa">
+                    <Pencil size={16} />
+                  </Link>
+                  <button className="iconButton" title="Xoá" onClick={() => setDeleteTarget(row)}>
                     <Trash2 size={16} />
                   </button>
                 </div>
-              ))}
-            </div>
-          )}
-        </article>
-
-        <article className="panel">
-          <div className="panelHeader">
-            <div>
-              <p className="eyebrow">Chủ đề</p>
-              <h2>Danh sách chủ đề</h2>
-            </div>
-          </div>
-          <form onSubmit={handleCreateTopic} className="controlRow" style={{ flexWrap: "wrap" }}>
-            <label className="field compact" style={{ width: 160 }}>
-              <span>Môn học</span>
-              <select
-                value={topicSubjectId ?? ""}
-                onChange={(event) => setTopicSubjectId(Number(event.target.value))}
-              >
-                {subjects.map((subject) => (
-                  <option key={subject.id} value={subject.id}>
-                    {subject.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field wide">
-              <span>Tên chủ đề</span>
-              <input value={topicName} onChange={(event) => setTopicName(event.target.value)} required />
-            </label>
-            <button className="primaryButton" type="submit">
-              <Plus size={16} />
-              Thêm
-            </button>
-          </form>
-
-          {loading ? (
-            <div className="emptyState">Đang tải...</div>
-          ) : (
-            <div className="questionList">
-              {topics.map((topic) => (
-                <div className="questionItem" key={topic.id}>
-                  <div>
-                    <strong>{topic.name}</strong>
-                    <span>{topic.subject_name}</span>
-                  </div>
-                  <button className="linkButton" onClick={() => handleDeleteTopic(topic)}>
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </article>
+              )
+            }
+          ]}
+        />
       </section>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Xoá môn học?"
+        description={deleteTarget ? `Xoá "${deleteTarget.name}"? Các chủ đề liên quan cũng sẽ bị xoá.` : undefined}
+        confirmLabel="Xoá"
+        danger
+        loading={isDeleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => deleteTarget && handleDelete(deleteTarget)}
+      />
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Xoá các môn học đã chọn?"
+        description={`Xoá ${selectedIds.size} môn học? Các chủ đề liên quan cũng sẽ bị xoá.`}
+        confirmLabel="Xoá"
+        danger
+        loading={isDeleting}
+        onCancel={() => setBulkDeleteOpen(false)}
+        onConfirm={handleBulkDelete}
+      />
     </>
   );
 }

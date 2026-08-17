@@ -7,11 +7,11 @@ use App\Actions\Users\DeleteUserAction;
 use App\Actions\Users\ListUsersAction;
 use App\Actions\Users\UpdateUserAction;
 use App\Data\Users\CreateUserDto;
+use App\Data\Users\ListUsersDto;
 use App\Data\Users\UpdateUserDto;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class UserController extends BaseController
@@ -23,12 +23,12 @@ class UserController extends BaseController
         private DeleteUserAction $deleteUserAction,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(ListUsersDto $dto): JsonResponse
     {
-        $users = $this->listUsersAction->execute($request->query('role'));
+        $users = $this->listUsersAction->execute($dto);
 
         return $this->respondSuccess(
-            data: UserResource::collection($users)->resolve(),
+            data: UserResource::collection($users),
             message: 'Users retrieved successfully.',
         );
     }
