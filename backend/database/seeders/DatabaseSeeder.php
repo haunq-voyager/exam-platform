@@ -96,9 +96,6 @@ class DatabaseSeeder extends Seeder
             'duration_minutes' => 30,
             'shuffle_questions' => true,
             'shuffle_options' => true,
-            'status' => ExamStatus::Open,
-            'start_at' => now(),
-            'end_at' => now()->addDays(7),
         ]);
 
         $questions->values()->each(function (Question $question, int $index) use ($exam) {
@@ -109,7 +106,17 @@ class DatabaseSeeder extends Seeder
             ]);
         });
 
-        $students->each(fn (User $student) => $exam->assignments()->create([
+        $examSession = $exam->sessions()->create([
+            'title' => 'Kiểm tra giữa kỳ - Công nghệ Web (Ca 1)',
+            'created_by' => $teacher->id,
+            'status' => ExamStatus::Open,
+            'start_at' => now(),
+            'end_at' => now()->addDays(7),
+        ]);
+
+        $examSession->teachers()->attach($teacher->id);
+
+        $students->each(fn (User $student) => $examSession->assignments()->create([
             'student_id' => $student->id,
         ]));
 

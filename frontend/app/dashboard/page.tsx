@@ -103,6 +103,7 @@ export default function DashboardOverviewPage() {
   const [userCount, setUserCount] = useState(0);
   const [questionCount, setQuestionCount] = useState(0);
   const [exams, setExams] = useState<Exam[]>([]);
+  const [openSessionCount, setOpenSessionCount] = useState(0);
   const [studentExams, setStudentExams] = useState<StudentExam[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
   const [monthFilter, setMonthFilter] = useState("all");
@@ -114,21 +115,25 @@ export default function DashboardOverviewPage() {
       setLoading(true);
       try {
         if (user!.role === "admin") {
-          const [usersResponse, questionsResponse, examsResponse] = await Promise.all([
-            api.get<{ data: User[] }>("/users"),
+          const [usersResponse, questionsResponse, examsResponse, openSessionsResponse] = await Promise.all([
+            api.get<{ data: User[] }>("/users", { per_page: 1 }),
             api.get<{ data: Question[] }>("/questions", { per_page: 1 }),
-            api.get<{ data: Exam[] }>("/exams")
+            api.get<{ data: Exam[] }>("/exams"),
+            api.get<{ data: unknown[] }>("/exam-sessions", { status: "open", per_page: 1 })
           ]);
-          setUserCount(usersResponse.data.length);
+          setUserCount((usersResponse as unknown as { meta?: { total?: number } }).meta?.total ?? usersResponse.data.length);
           setQuestionCount((questionsResponse as unknown as { meta?: { total?: number } }).meta?.total ?? questionsResponse.data.length);
           setExams(examsResponse.data);
+          setOpenSessionCount((openSessionsResponse as unknown as { meta?: { total?: number } }).meta?.total ?? openSessionsResponse.data.length);
         } else if (user!.role === "teacher") {
-          const [questionsResponse, examsResponse] = await Promise.all([
+          const [questionsResponse, examsResponse, openSessionsResponse] = await Promise.all([
             api.get<{ data: Question[] }>("/questions", { per_page: 1 }),
-            api.get<{ data: Exam[] }>("/exams")
+            api.get<{ data: Exam[] }>("/exams"),
+            api.get<{ data: unknown[] }>("/exam-sessions", { status: "open", per_page: 1 })
           ]);
           setQuestionCount((questionsResponse as unknown as { meta?: { total?: number } }).meta?.total ?? questionsResponse.data.length);
           setExams(examsResponse.data);
+          setOpenSessionCount((openSessionsResponse as unknown as { meta?: { total?: number } }).meta?.total ?? openSessionsResponse.data.length);
         } else {
           const [studentExamResponse, attemptsResponse] = await Promise.all([
             api.get<{ data: StudentExam[] }>("/student/exams"),
@@ -210,14 +215,22 @@ export default function DashboardOverviewPage() {
 
   if (user.role !== "student") {
     return (
-      <>
-        <section className="metricsGrid">
+      <div className="modernDashboard">
+        <section className="dashboardHero">
+          <div>
+            <p className="eyebrow">ExamHub overview</p>
+            <h2>{user.role === "admin" ? "Toàn cảnh vận hành hệ thống" : "Toàn cảnh giảng dạy của bạn"}</h2>
+            <p>Theo dõi ngân hàng câu hỏi, đề thi và các kỳ thi đang diễn ra chỉ trong một màn hình.</p>
+          </div>
+        </section>
+
+        <section className="saasStatsGrid">
           {user.role === "admin" ? <StatCard icon={Users} label="Người dùng" value={userCount} hint="Tài khoản trong hệ thống" tone="blue" /> : null}
           <StatCard icon={FileQuestion} label="Câu hỏi" value={questionCount} hint="Ngân hàng hiện có" tone="violet" />
           <StatCard icon={ClipboardList} label="Đề thi" value={exams.length} hint="Đề đã tạo" tone="green" />
-          <StatCard icon={AlertTriangle} label="Đề đang mở" value={exams.filter((exam) => exam.status === "open").length} hint="Cần theo dõi" tone="amber" />
+          <StatCard icon={AlertTriangle} label="Kỳ thi đang mở" value={openSessionCount} hint="Cần theo dõi" tone="amber" />
         </section>
-      </>
+      </div>
     );
   }
 

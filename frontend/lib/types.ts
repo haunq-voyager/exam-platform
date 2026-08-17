@@ -62,6 +62,7 @@ export interface ExamAssignmentItem {
   student_email?: string;
 }
 
+/** Đề thi mẫu (ngân hàng câu hỏi + thời lượng) — dùng lại được cho nhiều kỳ thi. */
 export interface Exam {
   id: number;
   title: string;
@@ -71,12 +72,32 @@ export interface Exam {
   duration_minutes: number;
   shuffle_questions: boolean;
   shuffle_options: boolean;
+  question_count?: number;
+  questions?: ExamQuestionItem[];
+  created_at?: string;
+}
+
+export interface ExamSessionTeacher {
+  id: number;
+  name: string;
+  email: string;
+}
+
+/** Kỳ thi cụ thể: một lần mở đề thi mẫu cho thí sinh làm, có lịch và trạng thái riêng. */
+export interface ExamSession {
+  id: number;
+  title: string;
   status: ExamStatus;
   start_at: string | null;
   end_at: string | null;
+  created_by: number;
+  creator_name?: string;
+  exam_id: number;
+  exam_title?: string;
   question_count?: number;
+  teachers?: ExamSessionTeacher[];
   assigned_student_count?: number;
-  questions?: ExamQuestionItem[];
+  attempt_count?: number;
   assignments?: ExamAssignmentItem[];
   created_at?: string;
 }
@@ -84,6 +105,7 @@ export interface Exam {
 export interface StudentExam {
   id: number;
   title: string;
+  exam_title?: string;
   description: string | null;
   duration_minutes: number;
   status: ExamStatus;
@@ -99,7 +121,8 @@ export type ExamAttemptStatus = "in_progress" | "submitted" | "graded";
 
 export interface ExamAttempt {
   id: number;
-  exam_id: number;
+  exam_session_id: number;
+  exam_session_title?: string;
   exam_title?: string;
   student_id: number;
   student_name?: string;

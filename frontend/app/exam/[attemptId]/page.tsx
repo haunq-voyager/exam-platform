@@ -4,7 +4,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { AlertTriangle, Camera, ChevronLeft, ChevronRight, ClipboardCheck, Radio, Save, ShieldCheck } from "lucide-react";
 import { api } from "../../../lib/api-client";
+import { createVideoFaceCounter, type FaceCountResult } from "../../../lib/face-detector";
 import type { ExamAttemptDetail, ProctoringEventType } from "../../../lib/types";
+
+const FACE_CHECK_INTERVAL_MS = 3000;
+const CONSECUTIVE_CHECKS_BEFORE_ALERT = 2;
+const SAME_EVENT_COOLDOWN_MS = 20000;
 
 function formatTime(totalSeconds: number): string {
   const minutes = Math.max(0, Math.floor(totalSeconds / 60));
@@ -137,26 +142,60 @@ export default function ExamTakingPage() {
 
   useEffect(() => {
     let stream: MediaStream | null = null;
+    let detectInterval: number | undefined;
+    let cancelled = false;
+    let consecutiveCount = 0;
+    let lastResult: FaceCountResult | null = null;
+    const lastEventAt: Partial<Record<ProctoringEventType, number>> = {};
+
+    function maybeRecord(eventType: ProctoringEventType, severity: "low" | "medium" | "high") {
+      const now = Date.now();
+      const last = lastEventAt[eventType] ?? 0;
+      if (now - last < SAME_EVENT_COOLDOWN_MS) return;
+      lastEventAt[eventType] = now;
+      recordEvent(eventType, severity);
+    }
+
     async function enableCamera() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        if (cancelled) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         if (videoRef.current) videoRef.current.srcObject = stream;
         setCameraEnabled(true);
+
+        const video = videoRef.current;
+        if (!video) return;
+        const { detectFaceCount } = await createVideoFaceCounter(video);
+        if (cancelled) return;
+
+        detectInterval = window.setInterval(() => {
+          const result = detectFaceCount();
+          if (result === null) return;
+
+          if (result === lastResult) {
+            consecutiveCount += 1;
+          } else {
+            consecutiveCount = 1;
+            lastResult = result;
+          }
+
+          if (consecutiveCount >= CONSECUTIVE_CHECKS_BEFORE_ALERT) {
+            if (result === "no_face") maybeRecord("no_face", "medium");
+            if (result === "multiple_faces") maybeRecord("multiple_faces", "high");
+          }
+        }, FACE_CHECK_INTERVAL_MS);
       } catch {
         setCameraEnabled(false);
       }
     }
     enableCamera();
 
-    const heartbeat = window.setInterval(() => {
-      if (Math.random() < 0.12) {
-        const options: ProctoringEventType[] = ["no_face", "inactive"];
-        recordEvent(options[Math.floor(Math.random() * options.length)], "low");
-      }
-    }, 20000);
-
     return () => {
-      window.clearInterval(heartbeat);
+      cancelled = true;
+      if (detectInterval) window.clearInterval(detectInterval);
       stream?.getTracks().forEach((track) => track.stop());
     };
   }, [recordEvent]);

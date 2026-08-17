@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::rename('exam_assignments', 'exam_session_assignments');
 
         Schema::table('exam_session_assignments', function (Blueprint $table) {
-            $table->dropUnique(['exam_id', 'student_id']);
-            $table->dropForeign(['exam_id']);
+            $table->dropUnique('exam_assignments_exam_id_student_id_unique');
+            $table->dropForeign('exam_assignments_exam_id_foreign');
             $table->renameColumn('exam_id', 'exam_session_id');
         });
 

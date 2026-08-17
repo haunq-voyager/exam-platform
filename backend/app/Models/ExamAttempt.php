@@ -11,17 +11,17 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * @property int $id
- * @property int $exam_id
+ * @property int $exam_session_id
  * @property int $student_id
  * @property ExamAttemptStatus $status
  * @property \Illuminate\Support\Carbon $started_at
  * @property \Illuminate\Support\Carbon|null $submitted_at
  * @property float|null $score
  * @property float|null $total_points
- * @property-read Exam $exam
+ * @property-read ExamSession $session
  * @property-read User $student
  */
-#[Fillable(['exam_id', 'student_id', 'status', 'started_at', 'submitted_at', 'score', 'total_points'])]
+#[Fillable(['exam_session_id', 'student_id', 'status', 'started_at', 'submitted_at', 'score', 'total_points'])]
 class ExamAttempt extends Model
 {
     protected function casts(): array
@@ -35,9 +35,9 @@ class ExamAttempt extends Model
         ];
     }
 
-    public function exam(): BelongsTo
+    public function session(): BelongsTo
     {
-        return $this->belongsTo(Exam::class);
+        return $this->belongsTo(ExamSession::class, 'exam_session_id');
     }
 
     public function student(): BelongsTo
