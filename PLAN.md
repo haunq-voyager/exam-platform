@@ -8,7 +8,7 @@ Thời gian thực hiện theo đề cương: 01/08/2026 – 15/10/2026 (~10 tu�
 - Backend Laravel 13 (PHP 8.4), kiến trúc Controller - Action - DTO - Resource, Sanctum auth, PostgreSQL.
 - Frontend Next.js 16 (App Router) + TypeScript.
 - Module nghiệp vụ cốt lõi: user/role, question bank, đề thi (mẫu) tách khỏi kỳ thi (lịch mở cụ thể), làm bài, chấm điểm — kèm seeder demo.
-- Module AI (`app/Actions/Ai`, `AiQuestionGeneratorContract`) đang dùng **MockAiQuestionGeneratorAdapter** — luồng tạo/duyệt/từ chối câu hỏi đã chạy end-to-end nhưng chưa gọi LLM thật.
+- Module AI (`app/Actions/Ai`, `AiQuestionGeneratorContract`) giờ gọi **Google Gemini thật** khi có `GEMINI_API_KEY` (adapter mới `GeminiAiQuestionGeneratorAdapter`, ép JSON schema qua `responseSchema`), tự động rơi về **mock provider** nếu chưa cấu hình key — chưa test được với key thật vì cần người dùng tự cung cấp.
 - Module Proctoring (`ProctoringEvent`, `ProctoringSession`) — backend có API ghi/xem sự kiện; frontend xin quyền camera, phát hiện chuyển tab thật qua Page Visibility API, và **face detection đã tích hợp MediaPipe Face Detector thật** (BlazeFace chạy trên trình duyệt) thay cho event giả lập trước đây.
 - Docker compose chạy được toàn hệ thống (đã test end-to-end qua curl: đăng nhập, tạo/mở kỳ thi, thí sinh làm bài, nộp bài, chấm điểm, ghi/xem cảnh báo camera).
 - **Đã sửa một lỗi kiến trúc nghiêm trọng có sẵn từ đầu dự án**: routes/api.php và model `ExamAttempt` vẫn ở thiết kế cũ (1 bảng `Exam` duy nhất) trong khi phần còn lại của backend (`ExamSessionController` và các Actions liên quan) đã được thiết kế lại theo hướng tách `Exam` (đề thi mẫu, tái sử dụng) / `ExamSession` (kỳ thi — một lần mở đề thi mẫu theo lịch cụ thể, đúng thuật ngữ "đề thi"/"kỳ thi" trong đề cương) nhưng chưa đấu nối xong — khiến toàn bộ luồng thi (bắt đầu làm bài, nộp bài, xem kết quả) bị gãy. Đã sửa `routes/api.php`, model `ExamAttempt`, và viết lại toàn bộ giao diện quản lý đề thi/kỳ thi phía admin/giảng viên (`/dashboard/exams` cho đề thi mẫu, `/dashboard/exam-sessions` mới cho quản lý kỳ thi/lịch/gán thí sinh/giảng viên) cho khớp.
@@ -30,12 +30,13 @@ Thời gian thực hiện theo đề cương: 01/08/2026 – 15/10/2026 (~10 tu�
 ## 2. Giai đoạn 2 (Tuần 5–8): Tích hợp AI thật + Camera proctoring thật
 
 ### 2.1 Tích hợp AI tạo câu hỏi (LLM thật)
-- [ ] Viết Adapter mới implement `AiQuestionGeneratorContract` gọi API LLM thật (ưu tiên gói miễn phí/giới hạn miễn phí theo đề cương).
-- [ ] Prompt engineering: ép output có cấu trúc (JSON schema) cho câu hỏi trắc nghiệm (question_text, options, correct_answer, explanation, difficulty).
-- [ ] Gộp nhiều câu hỏi/lần gọi (5–10 câu/lần) để tiết kiệm quota.
-- [ ] Lưu API key trong biến môi trường backend (`.env`), không lộ xuống frontend.
-- [ ] Đổi binding provider trong `AppServiceProvider` (mock → provider thật), giữ nguyên luồng nghiệp vụ/duyệt.
-- [ ] Đảm bảo câu hỏi AI sinh ra luôn ở trạng thái *chờ duyệt*, không tự động vào ngân hàng câu hỏi.
+- [x] Viết Adapter mới `GeminiAiQuestionGeneratorAdapter` implement `AiQuestionGeneratorContract`, gọi Google Gemini API (free tier).
+- [x] Prompt engineering: dùng `generationConfig.responseSchema` của Gemini để ép output JSON đúng cấu trúc (question_text, question_type, options, correct_answer, explanation, difficulty), validate/lọc lại kết quả phía backend trước khi lưu.
+- [x] Gộp N câu hỏi/lần gọi (`question_count`, tối đa 10 theo `CreateAiGenerationDto`) trong một request Gemini duy nhất để tiết kiệm quota.
+- [x] API key đọc từ `GEMINI_API_KEY` (biến môi trường backend / `config/services.php`), không lộ xuống frontend.
+- [x] `AppServiceProvider` bind theo điều kiện: có `GEMINI_API_KEY` → dùng Gemini thật; không có → tự rơi về mock, không sửa code nghiệp vụ.
+- [x] Câu hỏi AI sinh ra luôn ở trạng thái `pending` (chờ giảng viên duyệt) — không đổi so với luồng cũ.
+- [ ] **Cần người dùng cung cấp `GEMINI_API_KEY` thật để kiểm thử lời gọi Gemini thực tế** — đã test bằng curl xác nhận binding mock hoạt động đúng khi chưa có key; chưa test được lời gọi Gemini thật vì không có key để thử.
 
 ### 2.2 Cảnh báo gian lận qua camera (MediaPipe thật)
 - [x] Tích hợp MediaPipe Face Detector chạy trên trình duyệt (Next.js), thay thế event giả lập hiện tại (`frontend/lib/face-detector.ts`).
