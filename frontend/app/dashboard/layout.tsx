@@ -15,7 +15,6 @@ import {
   LogOut,
   Settings,
   ShieldCheck,
-  Sparkles,
   UserRound,
   Users
 } from "lucide-react";
@@ -42,7 +41,6 @@ const NAV_BY_ROLE: Record<string, NavItem[]> = {
     { href: "/dashboard/subjects", label: "Môn học", icon: BookOpenCheck },
     { href: "/dashboard/topics", label: "Chủ đề", icon: Layers },
     { href: "/dashboard/questions", label: "Ngân hàng câu hỏi", icon: FileQuestion },
-    { href: "/dashboard/ai-generate", label: "AI tạo câu hỏi", icon: Sparkles },
     { href: "/dashboard/exams", label: "Đề thi", icon: ClipboardList },
     { href: "/dashboard/exam-sessions", label: "Kỳ thi", icon: CalendarClock }
   ],

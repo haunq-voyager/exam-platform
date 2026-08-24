@@ -1929,6 +1929,58 @@ h2 {
   line-height: 1.5;
 }
 
+.previewModal {
+  width: min(100%, 640px);
+  max-height: 85vh;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.24);
+}
+
+.previewModalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.previewOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  background: #fbfdff;
+}
+
+.previewOption.correct {
+  border-color: rgba(16, 185, 129, 0.4);
+  background: var(--mint);
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
+.previewOption svg {
+  flex: 0 0 auto;
+  color: var(--green);
+}
+
+.previewExplanation {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .saasShell {
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr);

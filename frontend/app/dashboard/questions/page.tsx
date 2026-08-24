@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Check, Eye, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { api } from "../../../lib/api-client";
 import { DataTable } from "../../../components/DataTable";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
+import { QuestionPreviewModal } from "../../../components/QuestionPreviewModal";
 import { metaOf, type PaginatedResponse } from "../../../lib/pagination";
 import { useToast } from "../../../lib/toast";
 import { REVIEW_STATUS_LABEL, statusLabel } from "../../../lib/status-labels";
@@ -30,6 +31,7 @@ export default function QuestionsPage() {
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -190,6 +192,9 @@ export default function QuestionsPage() {
                       </button>
                     </>
                   ) : null}
+                  <button className="iconButton" title="Xem trước" onClick={() => setPreviewQuestion(row)}>
+                    <Eye size={16} />
+                  </button>
                   <Link className="iconButton" href={`/dashboard/questions/${row.id}/edit`} title="Sửa">
                     <Pencil size={16} />
                   </Link>
@@ -224,6 +229,8 @@ export default function QuestionsPage() {
         onCancel={() => setBulkDeleteOpen(false)}
         onConfirm={handleBulkDelete}
       />
+
+      <QuestionPreviewModal question={previewQuestion} onClose={() => setPreviewQuestion(null)} />
     </>
   );
 }
