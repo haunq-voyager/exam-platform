@@ -162,10 +162,11 @@ export default function QuestionsPage() {
             )
           }}
           columns={[
-            { key: "text", header: "Câu hỏi", render: (row) => <strong>{row.question_text.slice(0, 80)}</strong> },
+            { key: "text", header: "Câu hỏi", width: "38%", render: (row) => <strong>{row.question_text.slice(0, 80)}</strong> },
             {
               key: "meta",
               header: "Thông tin",
+              width: "27%",
               render: (row) => (
                 <span style={{ color: "var(--muted)", fontSize: 13 }}>
                   {row.topic_name ?? "Không thuộc chủ đề"} · {DIFFICULTY_LABEL[row.difficulty]} · {row.source === "ai" ? "Sinh bởi AI" : "Thủ công"}
@@ -175,11 +176,13 @@ export default function QuestionsPage() {
             {
               key: "status",
               header: "Trạng thái",
+              width: "13%",
               render: (row) => <span className={`badge ${STATUS_BADGE[row.status]}`}>{statusLabel(REVIEW_STATUS_LABEL, row.status)}</span>
             },
             {
               key: "actions",
               header: "",
+              width: "220px",
               render: (row) => (
                 <div className="controlRow" style={{ margin: 0, justifyContent: "flex-end" }}>
                   {row.status === "pending" ? (
