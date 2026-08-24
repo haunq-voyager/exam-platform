@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Play, Plus, Search, Square, Users } from "lucide-react";
+import { Eye, Play, Plus, Search, Square, Users } from "lucide-react";
 import { api } from "../../../lib/api-client";
 import { DataTable } from "../../../components/DataTable";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
@@ -148,6 +148,9 @@ export default function ExamSessionsPage() {
                       <Square size={16} />
                     </button>
                   )}
+                  <Link className="iconButton" href={`/dashboard/exam-sessions/${row.id}/preview`} title="Xem trước đề thi">
+                    <Eye size={16} />
+                  </Link>
                   <Link className="iconButton" href={`/dashboard/exam-sessions/${row.id}`} title="Quản lý thí sinh & giảng viên">
                     <Users size={16} />
                   </Link>

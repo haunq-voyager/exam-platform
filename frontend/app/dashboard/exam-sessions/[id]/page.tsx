@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, ClipboardList, GraduationCap, Play, Plus, Square, Trash2, Users } from "lucide-react";
+import { ArrowLeft, ClipboardList, Eye, GraduationCap, Play, Plus, Square, Trash2, Users } from "lucide-react";
 import { api, ApiError } from "../../../../lib/api-client";
 import { ConfirmDialog } from "../../../../components/ConfirmDialog";
 import { useToast } from "../../../../lib/toast";
@@ -150,6 +150,9 @@ export default function ExamSessionDetailPage() {
           <h1>{session.title}</h1>
         </div>
         <div className="topActions">
+          <Link className="iconButton" href={`/dashboard/exam-sessions/${sessionId}/preview`} title="Xem trước đề thi">
+            <Eye size={18} />
+          </Link>
           {session.status !== "open" ? (
             <button className="primaryButton" onClick={() => setPublishConfirmOpen(true)}>
               <Play size={18} />
