@@ -1165,12 +1165,17 @@ h2 {
   font-size: 13px;
 }
 
+.table {
+  table-layout: fixed;
+}
+
 .table th,
 .table td {
   padding: 12px;
   border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
+  overflow-wrap: break-word;
 }
 
 .table th {
@@ -1260,6 +1265,10 @@ h2 {
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.toolbar .controlRow {
+  align-items: flex-end;
 }
 
 .linkButton {
