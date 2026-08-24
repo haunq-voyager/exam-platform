@@ -15,3 +15,6 @@ frontend/out/
 frontend/.env*.local
 
 # Backend has its own .gitignore (vendor/, .env, storage/*, etc.)
+
+# Root-level .env used by docker-compose for secrets like GEMINI_API_KEY
+/.env

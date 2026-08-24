@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Contracts\AiQuestionGeneratorContract;
+use App\Services\Ai\GeminiAiQuestionGeneratorAdapter;
 use App\Services\Ai\MockAiQuestionGeneratorAdapter;
 use Illuminate\Support\ServiceProvider;
 
@@ -13,8 +14,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Mock provider for now — swap to an OpenAI/Gemini adapter later via this binding only.
-        $this->app->bind(AiQuestionGeneratorContract::class, MockAiQuestionGeneratorAdapter::class);
+        // Real provider when GEMINI_API_KEY is configured, mock fallback otherwise
+        // (keeps local/demo environments working without any API key).
+        $this->app->bind(AiQuestionGeneratorContract::class, function () {
+            $apiKey = config('services.gemini.api_key');
+
+            if (is_string($apiKey) && $apiKey !== '') {
+                return new GeminiAiQuestionGeneratorAdapter($apiKey, config('services.gemini.model'));
+            }
+
+            return new MockAiQuestionGeneratorAdapter();
+        });
     }
 
     /**

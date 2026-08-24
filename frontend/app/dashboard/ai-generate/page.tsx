@@ -80,9 +80,8 @@ export default function AiGeneratePage() {
       </header>
 
       <div className="formError" style={{ marginBottom: 18, background: "#eef2ef", color: "var(--muted)" }}>
-        Đang dùng <strong>mock AI provider</strong> (chưa gọi API AI thật) để demo luồng Human-in-the-loop — sinh câu hỏi,
-        giảng viên duyệt/từ chối trước khi đưa vào ngân hàng câu hỏi. Khi có API key thật, chỉ cần đổi binding ở
-        backend, không ảnh hưởng giao diện này.
+        Quy trình <strong>Human-in-the-loop</strong>: AI đề xuất câu hỏi ở trạng thái chờ duyệt, giảng viên duyệt/từ
+        chối trước khi đưa vào ngân hàng câu hỏi. Nhà cung cấp AI đang dùng: <strong>{generation?.model ?? "chưa xác định — sinh thử một lần để xem"}</strong>.
       </div>
 
       <section className="contentGrid">
