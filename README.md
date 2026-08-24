@@ -5,13 +5,13 @@
 - **Backend**: Laravel 13 (PHP 8.4), RESTful API, Sanctum (token auth), Spatie Laravel Data (DTO).
 - **Frontend**: Next.js 16 (App Router), TypeScript.
 - **Database**: PostgreSQL 16.
-- **AI tạo câu hỏi**: kiến trúc provider-agnostic (`AiQuestionGeneratorContract`). Dùng **Google Gemini** (free tier) khi có `GEMINI_API_KEY`, tự động rơi về **mock provider** nếu không cấu hình key — không cần sửa code nghiệp vụ để bật/tắt.
+- **AI tạo câu hỏi**: kiến trúc provider-agnostic (`AiQuestionGeneratorContract`). Ưu tiên **Anthropic Claude** khi có `ANTHROPIC_API_KEY`, dùng **Google Gemini** (free tier) khi có `GEMINI_API_KEY`, tự động rơi về **mock provider** nếu không cấu hình key nào — không cần sửa code nghiệp vụ để bật/tắt.
 - **Camera proctoring**: frontend xin quyền camera, phát hiện chuyển tab thật (Page Visibility API), và nhận diện khuôn mặt thật bằng **MediaPipe Face Detector** chạy ngay trên trình duyệt (`no_face`, `multiple_faces`) — chỉ gửi sự kiện cảnh báo về server, không truyền/lưu video.
 
 ## Chạy bằng Docker
 
 ```bash
-cp .env.example .env   # điền GEMINI_API_KEY nếu muốn AI sinh câu hỏi thật (bỏ trống = dùng mock)
+cp .env.example .env   # điền ANTHROPIC_API_KEY hoặc GEMINI_API_KEY nếu muốn AI sinh câu hỏi thật (bỏ trống = dùng mock)
 docker compose up --build
 ```
 
@@ -21,11 +21,13 @@ docker compose up --build
 
 Lần chạy đầu tiên, container `backend` sẽ tự động: sinh `APP_KEY`, chạy `migrate`, và `db:seed` (chỉ seed nếu bảng `users` đang rỗng).
 
-### Cấu hình AI tạo câu hỏi (Google Gemini)
+### Cấu hình AI tạo câu hỏi
 
-1. Lấy API key miễn phí tại https://aistudio.google.com/apikey.
-2. Đặt `GEMINI_API_KEY=<key>` trong file `.env` ở thư mục gốc (cạnh `docker-compose.yml`) — file này không bị commit.
-3. `docker compose up --build` lại để nạp biến môi trường mới. Nếu không đặt key, hệ thống tự dùng mock provider (sinh câu hỏi giả lập để demo luồng duyệt) — không lỗi, không cần đổi code.
+Thứ tự ưu tiên provider: **Claude** (nếu có `ANTHROPIC_API_KEY`) → **Gemini** (nếu có `GEMINI_API_KEY`) → mock.
+
+1. Lấy API key: Claude tại https://console.anthropic.com/settings/keys, hoặc Gemini free tier tại https://aistudio.google.com/apikey.
+2. Đặt key tương ứng (`ANTHROPIC_API_KEY=<key>` và/hoặc `GEMINI_API_KEY=<key>`) trong file `.env` ở thư mục gốc (cạnh `docker-compose.yml`) — file này không bị commit.
+3. `docker compose up --build` lại để nạp biến môi trường mới. Nếu không đặt key nào, hệ thống tự dùng mock provider (sinh câu hỏi giả lập để demo luồng duyệt) — không lỗi, không cần đổi code.
 
 ## Tài khoản demo (mật khẩu chung: `password`)
 

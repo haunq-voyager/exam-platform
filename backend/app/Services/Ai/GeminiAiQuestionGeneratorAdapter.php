@@ -4,6 +4,8 @@ namespace App\Services\Ai;
 
 use App\Contracts\AiQuestionGeneratorContract;
 use App\Exceptions\ApiException;
+use App\Services\Ai\Support\GeneratedQuestionNormalizer;
+use App\Services\Ai\Support\QuestionGenerationPrompt;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
@@ -46,10 +48,10 @@ class GeminiAiQuestionGeneratorAdapter implements AiQuestionGeneratorContract
     {
         $response = Http::timeout(60)
             ->post(
-                "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent",
+                "https://generativelanguage.googleapis.com/v1beta/models/{$this->model}:generateContent?".http_build_query(['key' => $this->apiKey]),
                 [
                     'contents' => [[
-                        'parts' => [['text' => $this->buildPrompt($prompt, $questionCount, $difficulty)]],
+                        'parts' => [['text' => QuestionGenerationPrompt::build($prompt, $questionCount, $difficulty)]],
                     ]],
                     'generationConfig' => [
                         'responseMimeType' => 'application/json',
@@ -57,7 +59,6 @@ class GeminiAiQuestionGeneratorAdapter implements AiQuestionGeneratorContract
                         'temperature' => 0.7,
                     ],
                 ],
-                ['key' => $this->apiKey],
             );
 
         if ($response->failed()) {
@@ -87,7 +88,7 @@ class GeminiAiQuestionGeneratorAdapter implements AiQuestionGeneratorContract
         }
 
         return collect($items)
-            ->map(fn (array $item) => $this->normalizeItem($item))
+            ->map(fn (array $item) => GeneratedQuestionNormalizer::normalize($item))
             ->filter()
             ->take($questionCount)
             ->values()
@@ -97,64 +98,5 @@ class GeminiAiQuestionGeneratorAdapter implements AiQuestionGeneratorContract
     public function modelName(): string
     {
         return "gemini/{$this->model}";
-    }
-
-    private function buildPrompt(string $prompt, int $questionCount, ?string $difficulty): string
-    {
-        $difficultyLine = $difficulty !== null
-            ? "Toàn bộ câu hỏi phải ở mức độ khó: {$difficulty}."
-            : 'Có thể pha trộn các mức độ khó easy/medium/hard.';
-
-        return <<<PROMPT
-            Bạn là trợ lý ra đề thi trắc nghiệm cho một hệ thống thi trực tuyến.
-            Hãy sinh chính xác {$questionCount} câu hỏi trắc nghiệm bằng tiếng Việt cho chủ đề/yêu cầu sau:
-
-            "{$prompt}"
-
-            Yêu cầu:
-            - Mỗi câu hỏi có 4 lựa chọn (option), trừ khi loại câu hỏi là true_false thì chỉ có 2 lựa chọn ("Đúng", "Sai").
-            - Trường correct_answer phải là các giá trị lấy nguyên văn từ options.
-            - question_type là một trong: single_choice, multiple_choice, true_false.
-            - {$difficultyLine}
-            - Câu hỏi phải rõ ràng, đúng kiến thức, không trùng lặp nội dung giữa các câu.
-            - explanation giải thích ngắn gọn vì sao đáp án đó đúng.
-            PROMPT;
-    }
-
-    /**
-     * @return array{question_text: string, question_type: string, options: array<int, string>, correct_answer: array<int, string>, explanation: string, difficulty: string}|null
-     */
-    private function normalizeItem(array $item): ?array
-    {
-        $options = array_values(array_filter(array_map('strval', (array) ($item['options'] ?? []))));
-        $correctAnswer = array_values(array_intersect(
-            array_map('strval', (array) ($item['correct_answer'] ?? [])),
-            $options,
-        ));
-
-        if (
-            ! isset($item['question_text'], $item['question_type'])
-            || count($options) < 2
-            || $correctAnswer === []
-        ) {
-            return null;
-        }
-
-        $questionType = in_array($item['question_type'], ['single_choice', 'multiple_choice', 'true_false'], true)
-            ? $item['question_type']
-            : 'single_choice';
-
-        $difficultyValue = in_array($item['difficulty'] ?? null, ['easy', 'medium', 'hard'], true)
-            ? $item['difficulty']
-            : 'medium';
-
-        return [
-            'question_text' => (string) $item['question_text'],
-            'question_type' => $questionType,
-            'options' => $options,
-            'correct_answer' => $correctAnswer,
-            'explanation' => (string) ($item['explanation'] ?? ''),
-            'difficulty' => $difficultyValue,
-        ];
     }
 }
