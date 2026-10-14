@@ -42,18 +42,15 @@ Thời gian thực hiện theo đề cương: 01/08/2026 – 15/10/2026 (~10 tu�
 
 ### 2.2 Cảnh báo gian lận qua camera (MediaPipe thật)
 - [x] Tích hợp MediaPipe Face Detector chạy trên trình duyệt (Next.js), thay thế event giả lập hiện tại (`frontend/lib/face-detector.ts`).
-- [x] Sinh sự kiện cảnh báo thật: `no_face`, `multiple_faces` (yêu cầu 2 lần kiểm tra liên tiếp trùng kết quả + cooldown 20s/loại để tránh nhiễu), kết hợp `tab_switch` đã có qua Page Visibility API.
+- [x] Sinh sự kiện cảnh báo thật: `no_face`, `multiple_faces`, `face_out_of_frame` (yêu cầu 2 lần kiểm tra liên tiếp trùng kết quả + cooldown 20s/loại để tránh nhiễu), kết hợp `tab_switch` đã có qua Page Visibility API. `face_out_of_frame` dùng heuristic bounding box chạm mép khung hình (margin 3%) vì MediaPipe chỉ trả về phần khuôn mặt nhìn thấy được, không thể đo trực tiếp phần "nằm ngoài khung" như mô tả ban đầu trong đề cương (30% diện tích) — cần cập nhật lại đề cương cho khớp cơ chế thật này.
 - [x] Chỉ gửi sự kiện cảnh báo (metadata) về server qua API đã có, không truyền/lưu video liên tục.
-- [ ] Thông báo rõ ràng cho thí sinh về việc sử dụng camera trước khi vào phòng thi (hiện chỉ có xin quyền trình duyệt, chưa có màn hình thông báo/đồng ý riêng).
-- [ ] Giới hạn quyền xem `proctoring_events` theo giảng viên phụ trách kỳ thi đó — hiện mọi tài khoản admin/teacher đều xem được mọi attempt (`ProctoringEventController::index`, `ShowExamAttemptAction`), chưa scope theo `exam_session.teachers`.
+- [x] Thông báo rõ ràng cho thí sinh về việc sử dụng camera trước khi vào phòng thi: màn hình đồng ý bắt buộc (chặn trước khi camera bật) tại `frontend/app/exam/[attemptId]/page.tsx`.
+- [x] Giới hạn quyền xem `proctoring_events` — đơn giản hoá theo quyết định của người dùng: **chỉ admin** được xem (không phải mọi teacher, cũng không scope theo giảng viên phụ trách kỳ thi). Route `exam-attempts/{id}/proctoring-events` đổi middleware `role:admin,teacher` → `role:admin`; trang `/dashboard/attempts/[id]` hiển thị thông báo "chỉ quản trị viên" cho giảng viên thay vì bị treo loading.
 
 ## 3. Giai đoạn 3 (Tuần 9–10): Kiểm thử, tối ưu, báo cáo
 
 ### 3.1 Kiểm thử hệ thống
-- [ ] Test API + luồng nghiệp vụ chính (ngân hàng câu hỏi, đề thi, kỳ thi, làm bài, chấm điểm).
-- [ ] Test luồng AI tạo câu hỏi + luồng kiểm duyệt (approve/reject).
-- [ ] Test các tình huống cảnh báo camera: không có khuôn mặt, nhiều khuôn mặt, chuyển tab.
-- [ ] Test giao diện theo từng vai trò (admin/giảng viên/thí sinh).
+- **Bỏ qua theo quyết định của người dùng**: không viết test tự động (unit/feature). Kiểm thử các luồng chính (nghiệp vụ, AI, camera, giao diện theo vai trò) thực hiện thủ công qua demo, không viết thành test case.
 
 ### 3.2 Đánh giá hiệu quả (phục vụ báo cáo)
 - [ ] AI tạo câu hỏi: tỷ lệ câu hỏi được giảng viên chấp nhận, số câu cần chỉnh sửa, độ phù hợp chủ đề.
