@@ -88,7 +88,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('exam-attempts/{examAttempt}/submit', [ExamAttemptController::class, 'submit']);
 
     Route::post('exam-attempts/{examAttempt}/proctoring-events', [ProctoringEventController::class, 'store']);
-    Route::middleware('role:admin,teacher')->group(function () {
+    Route::middleware('role:admin')->group(function () {
         Route::get('exam-attempts/{examAttempt}/proctoring-events', [ProctoringEventController::class, 'index']);
     });
 
