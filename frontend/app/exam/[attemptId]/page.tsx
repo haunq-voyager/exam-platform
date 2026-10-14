@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { AlertTriangle, Camera, ChevronLeft, ChevronRight, ClipboardCheck, Radio, Save, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Camera, ChevronLeft, ChevronRight, ClipboardCheck, Radio, Save, ShieldCheck, Video } from "lucide-react";
 import { api } from "../../../lib/api-client";
 import { createVideoFaceCounter, type FaceCountResult } from "../../../lib/face-detector";
 import type { ExamAttemptDetail, ProctoringEventType } from "../../../lib/types";
@@ -33,6 +33,7 @@ export default function ExamTakingPage() {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [showFiveMinuteWarning, setShowFiveMinuteWarning] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [cameraConsentAccepted, setCameraConsentAccepted] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const submittedRef = useRef(false);
   const answersRef = useRef<Record<number, string[]>>({});
@@ -185,20 +186,22 @@ export default function ExamTakingPage() {
           if (consecutiveCount >= CONSECUTIVE_CHECKS_BEFORE_ALERT) {
             if (result === "no_face") maybeRecord("no_face", "medium");
             if (result === "multiple_faces") maybeRecord("multiple_faces", "high");
+            if (result === "face_out_of_frame") maybeRecord("face_out_of_frame", "medium");
           }
         }, FACE_CHECK_INTERVAL_MS);
       } catch {
         setCameraEnabled(false);
       }
     }
-    enableCamera();
+
+    if (cameraConsentAccepted) enableCamera();
 
     return () => {
       cancelled = true;
       if (detectInterval) window.clearInterval(detectInterval);
       stream?.getTracks().forEach((track) => track.stop());
     };
-  }, [recordEvent]);
+  }, [recordEvent, cameraConsentAccepted]);
 
   function handleSelectAnswer(questionId: number, option: string, questionType: string) {
     setAnswers((prev) => {
@@ -381,6 +384,27 @@ export default function ExamTakingPage() {
           </article>
         </section>
       </section>
+
+      {!cameraConsentAccepted ? (
+        <div className="modalBackdrop" role="dialog" aria-modal="true">
+          <div className="confirmModal">
+            <Video size={30} />
+            <h2>Thông báo sử dụng camera giám sát</h2>
+            <p>
+              Trong suốt thời gian làm bài, hệ thống sẽ bật camera của bạn để hỗ trợ giám sát. Vui lòng đọc kỹ trước
+              khi tiếp tục:
+            </p>
+            <ul className="rulesList">
+              <li>Hệ thống chỉ gửi về máy chủ các <strong>sự kiện cảnh báo</strong> (không có khuôn mặt, nhiều khuôn mặt, rời khung hình, chuyển tab) — không ghi lại hay lưu trữ video.</li>
+              <li>Hình ảnh camera chỉ hiển thị tại trình duyệt của bạn, không được truyền đi.</li>
+              <li>Đây là cơ chế <strong>cảnh báo hỗ trợ</strong> giảng viên/giám thị — hệ thống không tự động kết luận gian lận hay trừ điểm.</li>
+            </ul>
+            <button className="primaryButton wide" onClick={() => setCameraConsentAccepted(true)}>
+              Tôi đã hiểu, bắt đầu làm bài
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {showFiveMinuteWarning ? (
         <div className="modalBackdrop" role="dialog" aria-modal="true">

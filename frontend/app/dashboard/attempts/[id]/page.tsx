@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { AlertTriangle, BarChart3 } from "lucide-react";
-import { api } from "../../../../lib/api-client";
+import { AlertTriangle, BarChart3, Lock } from "lucide-react";
+import { api, ApiError } from "../../../../lib/api-client";
+import { useAuth } from "../../../../lib/auth-context";
 import {
   ATTEMPT_STATUS_LABEL,
   PROCTORING_EVENT_LABEL,
@@ -17,26 +18,36 @@ const SEVERITY_BADGE: Record<string, string> = { low: "blue", medium: "amber", h
 export default function AttemptDetailPage() {
   const params = useParams<{ id: string }>();
   const attemptId = params.id;
+  const { user } = useAuth();
   const [attempt, setAttempt] = useState<ExamAttemptDetail | null>(null);
   const [events, setEvents] = useState<ProctoringEvent[]>([]);
+  const [eventsForbidden, setEventsForbidden] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        const [attemptResponse, eventsResponse] = await Promise.all([
-          api.get<{ data: ExamAttemptDetail }>(`/exam-attempts/${attemptId}`),
-          api.get<{ data: ProctoringEvent[] }>(`/exam-attempts/${attemptId}/proctoring-events`)
-        ]);
+        const attemptResponse = await api.get<{ data: ExamAttemptDetail }>(`/exam-attempts/${attemptId}`);
         setAttempt(attemptResponse.data);
-        setEvents(eventsResponse.data);
+
+        if (user?.role === "admin") {
+          try {
+            const eventsResponse = await api.get<{ data: ProctoringEvent[] }>(`/exam-attempts/${attemptId}/proctoring-events`);
+            setEvents(eventsResponse.data);
+          } catch (err) {
+            if (err instanceof ApiError && err.status === 403) setEventsForbidden(true);
+            else throw err;
+          }
+        } else {
+          setEventsForbidden(true);
+        }
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [attemptId]);
+  }, [attemptId, user]);
 
   if (loading || !attempt) {
     return <div className="emptyState">Đang tải...</div>;
@@ -93,33 +104,42 @@ export default function AttemptDetailPage() {
             </div>
           </div>
 
-          <div className="riskScore">
-            <BarChart3 size={18} />
-            <div>
-              <span>Số sự kiện cảnh báo</span>
-              <strong>{events.length}</strong>
+          {eventsForbidden ? (
+            <div className="emptyState">
+              <Lock size={18} />
+              <p style={{ marginTop: 8 }}>Chỉ quản trị viên mới có quyền xem lịch sử cảnh báo giám sát.</p>
             </div>
-          </div>
-
-          {events.length === 0 ? (
-            <div className="emptyState">Không có cảnh báo nào được ghi nhận.</div>
           ) : (
-            <div className="eventList">
-              {events.map((event) => (
-                <div className="eventItem" key={event.id}>
-                  <AlertTriangle size={17} />
-                  <div>
-                    <strong>{statusLabel(PROCTORING_EVENT_LABEL, event.event_type)}</strong>
-                    <span>
-                      {new Date(event.occurred_at).toLocaleString("vi-VN")} ·{" "}
-                      <span className={`badge ${SEVERITY_BADGE[event.severity]}`}>
-                        {statusLabel(SEVERITY_LABEL, event.severity)}
-                      </span>
-                    </span>
-                  </div>
+            <>
+              <div className="riskScore">
+                <BarChart3 size={18} />
+                <div>
+                  <span>Số sự kiện cảnh báo</span>
+                  <strong>{events.length}</strong>
                 </div>
-              ))}
-            </div>
+              </div>
+
+              {events.length === 0 ? (
+                <div className="emptyState">Không có cảnh báo nào được ghi nhận.</div>
+              ) : (
+                <div className="eventList">
+                  {events.map((event) => (
+                    <div className="eventItem" key={event.id}>
+                      <AlertTriangle size={17} />
+                      <div>
+                        <strong>{statusLabel(PROCTORING_EVENT_LABEL, event.event_type)}</strong>
+                        <span>
+                          {new Date(event.occurred_at).toLocaleString("vi-VN")} ·{" "}
+                          <span className={`badge ${SEVERITY_BADGE[event.severity]}`}>
+                            {statusLabel(SEVERITY_LABEL, event.severity)}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </article>
       </section>

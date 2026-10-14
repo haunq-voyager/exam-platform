@@ -19,7 +19,29 @@ function getSharedFaceDetector(): Promise<FaceDetector> {
   return sharedDetectorPromise;
 }
 
-export type FaceCountResult = "no_face" | "multiple_faces" | "ok";
+export type FaceCountResult = "no_face" | "multiple_faces" | "face_out_of_frame" | "ok";
+
+/**
+ * MediaPipe only reports the portion of a face it can actually see, so a
+ * bounding box can never literally extend past the frame. As a proxy for
+ * "rời khung hình", treat a face whose box touches/crosses a frame edge
+ * (within this margin) as partially cut off by the camera boundary.
+ */
+const OUT_OF_FRAME_EDGE_MARGIN_RATIO = 0.03;
+
+function isTouchingFrameEdge(
+  box: { originX: number; originY: number; width: number; height: number },
+  frameWidth: number,
+  frameHeight: number
+): boolean {
+  const marginX = frameWidth * OUT_OF_FRAME_EDGE_MARGIN_RATIO;
+  const marginY = frameHeight * OUT_OF_FRAME_EDGE_MARGIN_RATIO;
+  const left = box.originX;
+  const top = box.originY;
+  const right = frameWidth - (box.originX + box.width);
+  const bottom = frameHeight - (box.originY + box.height);
+  return left <= marginX || top <= marginY || right <= marginX || bottom <= marginY;
+}
 
 export async function createVideoFaceCounter(
   video: HTMLVideoElement
@@ -32,6 +54,11 @@ export async function createVideoFaceCounter(
     const faceCount = result.detections.length;
     if (faceCount === 0) return "no_face";
     if (faceCount > 1) return "multiple_faces";
+
+    const box = result.detections[0]?.boundingBox;
+    if (box && isTouchingFrameEdge(box, video.videoWidth, video.videoHeight)) {
+      return "face_out_of_frame";
+    }
     return "ok";
   }
 
