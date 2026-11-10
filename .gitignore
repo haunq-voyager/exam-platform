@@ -15,6 +15,7 @@ frontend/out/
 # Generated from node_modules by frontend/scripts/copy-mediapipe.mjs (predev/prebuild)
 frontend/public/mediapipe/wasm/
 frontend/.env*.local
+frontend/*.tsbuildinfo
 
 # Backend has its own .gitignore (vendor/, .env, storage/*, etc.)
 
