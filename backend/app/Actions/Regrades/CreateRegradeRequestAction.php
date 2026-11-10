@@ -24,10 +24,22 @@ class CreateRegradeRequestAction
             throw new ApiException('This attempt has not been graded yet.', 'regrade_request.not_graded', 422);
         }
 
+        if ($attempt->isCancelled()) {
+            throw new ApiException('A cancelled attempt cannot be regraded.', 'regrade_request.attempt_cancelled', 422);
+        }
+
+        $alreadyPending = RegradeRequest::query()
+            ->where('exam_attempt_id', $attempt->id)
+            ->where('status', RegradeRequestStatus::Pending)
+            ->exists();
+        if ($alreadyPending) {
+            throw new ApiException('There is already a pending regrade request for this attempt.', 'regrade_request.already_pending', 422);
+        }
+
         return RegradeRequest::create([
             'exam_attempt_id' => $attempt->id,
             'student_id' => $student->id,
-            'reason' => $dto->reason,
+            'reason' => trim($dto->reason),
             'status' => RegradeRequestStatus::Pending,
             'old_score' => $attempt->score,
         ]);

@@ -1,5 +1,7 @@
 "use client";
 
+
+import { tr } from "../lib/i18n";
 import { AlertTriangle, HelpCircle } from "lucide-react";
 
 interface ConfirmDialogProps {
@@ -18,8 +20,8 @@ export function ConfirmDialog({
   open,
   title,
   description,
-  confirmLabel = "Xác nhận",
-  cancelLabel = "Huỷ",
+  confirmLabel = tr("Xác nhận"),
+  cancelLabel = tr("Huỷ"),
   danger = false,
   loading = false,
   onConfirm,
@@ -38,7 +40,7 @@ export function ConfirmDialog({
             {cancelLabel}
           </button>
           <button className={danger ? "dangerButton" : "primaryButton"} onClick={onConfirm} disabled={loading}>
-            {loading ? "Đang xử lý..." : confirmLabel}
+            {loading ? tr("Đang xử lý...") : confirmLabel}
           </button>
         </div>
       </div>

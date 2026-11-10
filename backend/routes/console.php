@@ -36,3 +36,5 @@ Artisan::command('exam-attempts:submit-expired', function () {
 })->purpose('Submit in-progress exam attempts after their duration expires');
 
 Schedule::command('exam-attempts:submit-expired')->everyMinute()->withoutOverlapping();
+
+Schedule::command('reminders:send')->everyFiveMinutes()->withoutOverlapping();

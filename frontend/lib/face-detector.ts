@@ -1,20 +1,35 @@
 import { FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 
-const WASM_BASE_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm";
-const MODEL_ASSET_PATH =
-  "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
+// Both are served from our own origin: the WASM is copied from node_modules at build time
+// (scripts/copy-mediapipe.mjs) so it always matches the installed JS API, and the model lives in public/.
+const WASM_BASE_URL = "/mediapipe/wasm";
+const MODEL_ASSET_PATH = "/mediapipe/blaze_face_short_range.tflite";
 
 let sharedDetectorPromise: Promise<FaceDetector> | null = null;
 
+async function createFaceDetector(): Promise<FaceDetector> {
+  const vision = await FilesetResolver.forVisionTasks(WASM_BASE_URL);
+  const create = (delegate: "GPU" | "CPU") =>
+    FaceDetector.createFromOptions(vision, {
+      baseOptions: { modelAssetPath: MODEL_ASSET_PATH, delegate },
+      runningMode: "VIDEO",
+      minDetectionConfidence: 0.5,
+    });
+
+  try {
+    return await create("GPU");
+  } catch {
+    // GPU/WebGL delegate is unavailable on some machines; CPU is slower but works everywhere.
+    return create("CPU");
+  }
+}
+
 function getSharedFaceDetector(): Promise<FaceDetector> {
   if (!sharedDetectorPromise) {
-    sharedDetectorPromise = FilesetResolver.forVisionTasks(WASM_BASE_URL).then((vision) =>
-      FaceDetector.createFromOptions(vision, {
-        baseOptions: { modelAssetPath: MODEL_ASSET_PATH, delegate: "GPU" },
-        runningMode: "VIDEO",
-        minDetectionConfidence: 0.5,
-      })
-    );
+    sharedDetectorPromise = createFaceDetector().catch((error) => {
+      sharedDetectorPromise = null; // allow a retry instead of caching the failure
+      throw error;
+    });
   }
   return sharedDetectorPromise;
 }

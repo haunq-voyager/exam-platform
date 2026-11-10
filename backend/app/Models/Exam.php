@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $duration_minutes
  * @property bool $shuffle_questions
  * @property bool $shuffle_options
+ * @property bool $is_template
  * @property-read User $creator
  */
 #[Fillable([
@@ -25,6 +26,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'duration_minutes',
     'shuffle_questions',
     'shuffle_options',
+    'is_template',
 ])]
 class Exam extends Model
 {
@@ -33,6 +35,7 @@ class Exam extends Model
         return [
             'shuffle_questions' => 'boolean',
             'shuffle_options' => 'boolean',
+            'is_template' => 'boolean',
         ];
     }
 

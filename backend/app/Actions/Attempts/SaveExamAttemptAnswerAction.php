@@ -11,9 +11,21 @@ use App\Models\User;
 
 class SaveExamAttemptAnswerAction
 {
+    public function __construct(
+        private ExpireOverdueAttemptsAction $expireOverdueAttemptsAction,
+        private SubmitExamAttemptAction $submitExamAttemptAction,
+    ) {}
+
     public function execute(ExamAttempt $attempt, SaveAnswerDto $dto, User $student): ExamAttemptAnswer
     {
         $this->assertOwnedAndInProgress($attempt, $student);
+
+        // Past the deadline (plus grace) the attempt is finished: grade what was saved and refuse new answers.
+        $attempt->loadMissing('session.exam');
+        if ($this->expireOverdueAttemptsAction->isOverdue($attempt)) {
+            $this->submitExamAttemptAction->executeSystem($attempt, $attempt->deadline());
+            throw new ApiException('The time for this attempt has run out.', 'exam_attempt.expired', 422);
+        }
 
         $belongsToExam = $attempt->session->exam->examQuestions()->where('question_id', $dto->question_id)->exists();
         if (! $belongsToExam) {

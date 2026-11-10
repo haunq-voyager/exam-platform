@@ -1,8 +1,10 @@
 "use client";
 
+
+import { tr } from "../../../../lib/i18n";
 import { useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/RoleLink";
+import { useRouter } from "@/lib/use-role-router";
 import { ArrowLeft, Save } from "lucide-react";
 import { api, ApiError } from "../../../../lib/api-client";
 import { useToast } from "../../../../lib/toast";
@@ -21,10 +23,10 @@ export default function NewSubjectPage() {
     setIsSubmitting(true);
     try {
       await api.post("/subjects", { name, description: description || null });
-      showToast("Đã lưu môn học mới.");
+      showToast(tr("Đã lưu môn học mới."));
       router.push("/dashboard/subjects");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Không thể tạo môn học.");
+      setError(err instanceof ApiError ? err.message : tr("Không thể tạo môn học."));
     } finally {
       setIsSubmitting(false);
     }
@@ -36,10 +38,10 @@ export default function NewSubjectPage() {
         <div>
           <Link className="approveButton" href="/dashboard/subjects" style={{ marginBottom: 10 }}>
             <ArrowLeft size={16} />
-            Danh sách môn học
+            {tr("Danh sách môn học")}
           </Link>
-          <p className="eyebrow">Môn học</p>
-          <h1>Tạo môn học mới</h1>
+          <p className="eyebrow">{tr("Môn học")}</p>
+          <h1>{tr("Tạo môn học mới")}</h1>
         </div>
       </header>
 
@@ -47,16 +49,16 @@ export default function NewSubjectPage() {
         <form onSubmit={handleSubmit}>
           {error ? <div className="formError" style={{ marginBottom: 14 }}>{error}</div> : null}
           <label className="field">
-            <span>Tên môn học</span>
+            <span>{tr("Tên môn học")}</span>
             <input value={name} onChange={(event) => setName(event.target.value)} required autoFocus />
           </label>
           <label className="field" style={{ marginTop: 14 }}>
-            <span>Mô tả</span>
+            <span>{tr("Mô tả")}</span>
             <textarea className="textarea" value={description} onChange={(event) => setDescription(event.target.value)} />
           </label>
           <button className="primaryButton" type="submit" style={{ marginTop: 18 }} disabled={isSubmitting}>
             <Save size={16} />
-            {isSubmitting ? "Đang lưu..." : "Lưu môn học"}
+            {isSubmitting ? tr("Đang lưu...") : tr("Lưu môn học")}
           </button>
         </form>
       </section>

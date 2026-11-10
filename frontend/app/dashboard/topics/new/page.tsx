@@ -1,8 +1,10 @@
 "use client";
 
+
+import { tr } from "../../../../lib/i18n";
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/RoleLink";
+import { useRouter } from "@/lib/use-role-router";
 import { ArrowLeft, Save } from "lucide-react";
 import { api, ApiError } from "../../../../lib/api-client";
 import { useToast } from "../../../../lib/toast";
@@ -31,16 +33,16 @@ export default function NewTopicPage() {
     event.preventDefault();
     setError(null);
     if (!subjectId) {
-      setError("Chọn môn học cho chủ đề.");
+      setError(tr("Chọn môn học cho chủ đề."));
       return;
     }
     setIsSubmitting(true);
     try {
       await api.post("/topics", { subject_id: Number(subjectId), name, description: description || null });
-      showToast("Đã lưu chủ đề mới.");
+      showToast(tr("Đã lưu chủ đề mới."));
       router.push("/dashboard/topics");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Không thể tạo chủ đề.");
+      setError(err instanceof ApiError ? err.message : tr("Không thể tạo chủ đề."));
     } finally {
       setIsSubmitting(false);
     }
@@ -52,10 +54,10 @@ export default function NewTopicPage() {
         <div>
           <Link className="approveButton" href="/dashboard/topics" style={{ marginBottom: 10 }}>
             <ArrowLeft size={16} />
-            Danh sách chủ đề
+            {tr("Danh sách chủ đề")}
           </Link>
-          <p className="eyebrow">Chủ đề</p>
-          <h1>Tạo chủ đề mới</h1>
+          <p className="eyebrow">{tr("Chủ đề")}</p>
+          <h1>{tr("Tạo chủ đề mới")}</h1>
         </div>
       </header>
 
@@ -63,9 +65,9 @@ export default function NewTopicPage() {
         <form onSubmit={handleSubmit}>
           {error ? <div className="formError" style={{ marginBottom: 14 }}>{error}</div> : null}
           <label className="field">
-            <span>Môn học</span>
+            <span>{tr("Môn học")}</span>
             <select value={subjectId} onChange={(event) => setSubjectId(event.target.value)} required>
-              <option value="">-- Chọn môn học --</option>
+              <option value="">{tr("-- Chọn môn học --")}</option>
               {subjects.map((subject) => (
                 <option key={subject.id} value={subject.id}>
                   {subject.name}
@@ -74,16 +76,16 @@ export default function NewTopicPage() {
             </select>
           </label>
           <label className="field" style={{ marginTop: 14 }}>
-            <span>Tên chủ đề</span>
+            <span>{tr("Tên chủ đề")}</span>
             <input value={name} onChange={(event) => setName(event.target.value)} required />
           </label>
           <label className="field" style={{ marginTop: 14 }}>
-            <span>Mô tả</span>
+            <span>{tr("Mô tả")}</span>
             <textarea className="textarea" value={description} onChange={(event) => setDescription(event.target.value)} />
           </label>
           <button className="primaryButton" type="submit" style={{ marginTop: 18 }} disabled={isSubmitting}>
             <Save size={16} />
-            {isSubmitting ? "Đang lưu..." : "Lưu chủ đề"}
+            {isSubmitting ? tr("Đang lưu...") : tr("Lưu chủ đề")}
           </button>
         </form>
       </section>

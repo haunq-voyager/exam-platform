@@ -1,3 +1,6 @@
+import { getLang, tr } from "./i18n";
+import { API_MESSAGES } from "./api-messages";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 export class ApiError extends Error {
@@ -48,14 +51,18 @@ export async function apiRequest<T = unknown>(path: string, options: RequestOpti
     if (queryString) url += `?${queryString}`;
   }
 
+  // FormData (file uploads) must be sent as-is: the browser sets the multipart Content-Type with its boundary itself.
+  const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
+
   const response = await fetch(url, {
     method: options.method ?? "GET",
     headers: {
-      "Content-Type": "application/json",
+      ...(isForm ? {} : { "Content-Type": "application/json" }),
       Accept: "application/json",
+      "X-Locale": getLang(),
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: options.body === undefined ? undefined : isForm ? (options.body as FormData) : JSON.stringify(options.body),
     cache: "no-store"
   });
 
@@ -64,7 +71,7 @@ export async function apiRequest<T = unknown>(path: string, options: RequestOpti
 
   if (!response.ok) {
     throw new ApiError(
-      payload?.message ?? "Đã có lỗi xảy ra, vui lòng thử lại.",
+      (payload?.message_code && API_MESSAGES[payload.message_code]) ?? payload?.message ?? tr("Đã có lỗi xảy ra, vui lòng thử lại."),
       response.status,
       payload?.message_code,
       payload?.errors
@@ -77,6 +84,8 @@ export async function apiRequest<T = unknown>(path: string, options: RequestOpti
 export const api = {
   get: <T = unknown>(path: string, query?: RequestOptions["query"]) => apiRequest<T>(path, { method: "GET", query }),
   post: <T = unknown>(path: string, body?: unknown) => apiRequest<T>(path, { method: "POST", body }),
+  postForm: <T = unknown>(path: string, body: FormData) => apiRequest<T>(path, { method: "POST", body }),
+  put: <T = unknown>(path: string, body?: unknown) => apiRequest<T>(path, { method: "PUT", body }),
   patch: <T = unknown>(path: string, body?: unknown) => apiRequest<T>(path, { method: "PATCH", body }),
   delete: <T = unknown>(path: string) => apiRequest<T>(path, { method: "DELETE" })
 };

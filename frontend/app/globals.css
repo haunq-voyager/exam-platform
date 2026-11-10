@@ -59,6 +59,13 @@ select {
   font: inherit;
 }
 
+/* The native dropdown list does not inherit the select's font by default and falls back to the OS font. */
+select option,
+select optgroup {
+  font-family: inherit;
+  font-weight: 500;
+}
+
 button {
   cursor: pointer;
 }
@@ -683,7 +690,7 @@ h2 {
     border-color 0.16s ease,
     box-shadow 0.16s ease,
     transform 0.16s ease;
-  animation: softSlideUp 0.42s ease both;
+  animation: softSlideUp 0.42s ease backwards;
 }
 
 .metricCard:hover {
@@ -733,7 +740,7 @@ h2 {
 
 .panel {
   padding: 20px;
-  animation: softSlideUp 0.46s ease both;
+  animation: softSlideUp 0.46s ease backwards;
 }
 
 .cameraPanel {
@@ -815,6 +822,17 @@ h2 {
   border-color: rgba(37, 99, 235, 0.2);
   box-shadow: 0 14px 34px rgba(37, 99, 235, 0.09);
   transform: translateX(4px);
+}
+
+/* A status badge sitting in its own grid column: same width on every row so the column lines up. */
+.questionItem > .badge {
+  justify-self: center;
+  justify-content: center;
+  min-width: 112px;
+}
+
+.questionItem > div {
+  min-width: 0;
 }
 
 .questionItem strong {
@@ -974,14 +992,14 @@ h2 {
   color: #dbeafe;
 }
 
-.cameraFrame.online::before {
-  position: absolute;
-  width: 130px;
-  height: 168px;
-  border: 2px solid rgba(219, 234, 254, 0.72);
-  border-radius: 50%;
-  content: "";
-  pointer-events: none;
+/* Frame border reflects the live proctoring state instead of a decorative face outline. */
+.cameraFrame.statusOk {
+  border: 3px solid #16a34a;
+}
+
+.cameraFrame.statusAlert {
+  border: 3px solid #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
 }
 
 .faceGuide {
@@ -1189,6 +1207,22 @@ h2 {
   background: #fbfdff;
 }
 
+.table tbody tr.expandedRow:hover {
+  background: transparent;
+}
+
+.table tr.expandedRow > td {
+  padding: 0 12px 14px;
+  background: #f8fafc;
+}
+
+/* Status badges sharing one cell wrap onto their own row. */
+.monitorBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -1312,6 +1346,15 @@ h2 {
   margin-bottom: 18px;
 }
 
+.examCode {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
 .searchField {
   display: inline-flex;
   align-items: center;
@@ -1399,7 +1442,7 @@ h2 {
     box-shadow 0.18s ease,
     transform 0.18s ease,
     background-position 0.3s ease;
-  animation: softSlideUp 0.42s ease both;
+  animation: softSlideUp 0.42s ease backwards;
 }
 
 .studentExamCard:nth-child(2) {
@@ -1532,8 +1575,14 @@ h2 {
     linear-gradient(135deg, #f0f9ff, #f0fdfa);
 }
 
+.periodFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .compactMonth {
-  width: 220px;
+  width: 160px;
 }
 
 .studentMetrics {
@@ -1755,6 +1804,477 @@ h2 {
   box-shadow: 0 10px 20px rgba(37, 99, 235, 0.12);
 }
 
+/* Attempt review: right/wrong flag in the corner of each question button. */
+.paletteDot {
+  position: relative;
+}
+
+.paletteDot.correct {
+  border-color: rgba(22, 163, 106, 0.45);
+  background: #dcfce7;
+  color: var(--green-dark);
+}
+
+.paletteDot.wrong {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.paletteDot.correct::after,
+.paletteDot.wrong::after {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.paletteDot.correct::after {
+  background: #16a34a;
+  content: "✓";
+}
+
+.paletteDot.wrong::after {
+  background: #dc2626;
+  content: "✕";
+}
+
+/* The selected question keeps its blue fill; the corner flag still shows its result. */
+.paletteDot.active.correct,
+.paletteDot.active.wrong {
+  border-color: rgba(37, 99, 235, 0.38);
+  background: #2563b8;
+  color: #ffffff;
+}
+
+.paletteLegend .legendCorrect {
+  border-color: #16a34a;
+  background: #16a34a;
+}
+
+.paletteLegend .legendWrong {
+  border-color: #dc2626;
+  background: #dc2626;
+}
+
+.examWorkspaceGrid.twoColumns {
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+
+.reviewOption {
+  grid-template-columns: 34px 1fr auto;
+  cursor: default;
+}
+
+.reviewOption:hover {
+  transform: none;
+}
+
+.reviewTags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.answer.reviewCorrect {
+  border-color: rgba(22, 163, 106, 0.6);
+  background: #f0fdf4;
+}
+
+.answer.reviewCorrect b {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+.answer.reviewWrong {
+  border-color: rgba(220, 38, 38, 0.55);
+  background: #fef2f2;
+}
+
+.answer.reviewWrong b {
+  background: #dc2626;
+  color: #ffffff;
+}
+
+/* ---- Fit-to-viewport layouts: the page itself does not scroll, each area scrolls on its own. ---- */
+.examWorkspaceGrid.fitViewport {
+  align-items: stretch;
+  height: calc(100dvh - var(--fit-offset, 240px));
+  min-height: 440px;
+}
+
+.examWorkspaceGrid.fitViewport > * {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.examWorkspaceGrid.fitViewport .questionSidebar {
+  position: static;
+}
+
+/* Panels that keep their header/footer fixed and scroll only the middle. */
+.fitPanel {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+.fitBody {
+  flex: 1;
+  min-height: 0;
+  padding-right: 4px;
+  overflow-y: auto;
+}
+
+.fitFooter {
+  flex-shrink: 0;
+  margin-top: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.fitFooter .controlRow,
+.fitFooter.controlRow {
+  margin: 10px 0 0;
+}
+
+.fitPanel > *:not(.fitBody):not(.eventList) {
+  flex-shrink: 0;
+}
+
+.fitPanel .cameraFrame {
+  min-height: 190px;
+}
+
+/* The exam room header is compact so the question area gets the screen height. */
+.clientExamShell .examTopbar {
+  min-height: 84px;
+  padding: 12px 20px;
+}
+
+.fitPanel .eventList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Compact header for result pages: title on the left with small status chips instead of a large hero band. */
+.reviewHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin-bottom: 12px;
+}
+
+.reviewHeader .eyebrow {
+  margin: 0;
+}
+
+.reviewHeader h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.reviewChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reviewChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.reviewChip.score {
+  border-color: rgba(37, 99, 235, 0.3);
+  background: #f4f8ff;
+  font-size: 15px;
+}
+
+.reviewNotice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Compact attempt list for the left column. */
+.historyList {
+  display: grid;
+  gap: 6px;
+  max-height: 168px;
+  margin-bottom: 14px;
+  overflow-y: auto;
+}
+
+.historyRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #ffffff;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.historyRow:hover {
+  border-color: #c6d3e2;
+}
+
+.historyRow.active {
+  border-color: rgba(37, 99, 235, 0.55);
+  background: #f4f8ff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.historyRow.cancelled {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: #fef2f2;
+}
+
+.historyRowScore {
+  font-weight: 900;
+}
+
+.historyRowIcons {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sideTitle {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Scrollable list area (lazy loaded) used for long result lists. */
+.scrollArea {
+  max-height: calc(100dvh - 330px);
+  min-height: 240px;
+  padding-right: 4px;
+  overflow-y: auto;
+}
+
+.lazySentinel {
+  display: grid;
+  place-items: center;
+  min-height: 36px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Narrow screens stack the columns, so let the page scroll normally there. */
+@media (max-width: 1060px) {
+  .examWorkspaceGrid.fitViewport,
+  .examWorkspaceGrid.twoColumns {
+    grid-template-columns: 1fr;
+  }
+
+  .examWorkspaceGrid.fitViewport {
+    height: auto;
+  }
+
+  .examWorkspaceGrid.fitViewport > * {
+    overflow: visible;
+  }
+
+  .fitPanel {
+    overflow: visible !important;
+  }
+}
+
+/* Attempt history: one card per attempt, grouped inside a student / exam instead of a flat table. */
+.attemptHistory {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.historyChip {
+  display: grid;
+  gap: 6px;
+  min-width: 170px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #ffffff;
+  color: var(--ink);
+  transition:
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.historyChip:hover {
+  border-color: #c6d3e2;
+  transform: translateY(-1px);
+}
+
+.historyChip.active {
+  border-color: rgba(37, 99, 235, 0.55);
+  background: #f4f8ff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.historyChip.cancelled {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: #fef2f2;
+}
+
+.historyTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.historyScore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.historyChip small {
+  color: var(--muted);
+}
+
+.historyFlags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.historyPanel {
+  margin-bottom: 18px;
+}
+
+/* One expandable block per student (teacher results) or per exam (student results). */
+.groupCard {
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.groupCard summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.groupCard summary::-webkit-details-marker {
+  display: none;
+}
+
+.groupCard[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.groupMain {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+
+.groupMeta {
+  flex-shrink: 0;
+}
+
+.groupMeta .badge {
+  justify-content: center;
+  min-width: 104px;
+}
+
+.groupMain span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.groupMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.groupScore {
+  min-width: 92px;
+  font-size: 18px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.groupCard .groupChevron {
+  transition: transform 0.18s ease;
+}
+
+.groupCard[open] .groupChevron {
+  transform: rotate(180deg);
+}
+
+.groupBody {
+  padding: 14px 16px 16px;
+}
+
+.reviewEmpty {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.reviewExplanation {
+  margin-top: 14px;
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: #f4f8ff;
+}
+
+.reviewExplanation p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 @keyframes barSlide {
   from {
     transform: translateX(-18px);
@@ -1849,16 +2369,18 @@ h2 {
 }
 
 .pageTransition {
-  animation: pageFadeIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: pageFadeIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
+/*
+ * Opacity only, on purpose: any transform on this wrapper (even a finished one kept by fill-mode) makes it the
+ * containing block of every position: fixed descendant, which is what made the fixed sidebar scroll with the page.
+ */
 @keyframes pageFadeIn {
   from {
-    transform: translateY(8px);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -1933,6 +2455,36 @@ h2 {
   color: var(--blue);
 }
 
+/* Exam rules popup: wide and large type so the rules are easy to read before starting. */
+.rulesModal {
+  width: min(100%, 900px);
+  max-height: 92vh;
+  overflow-y: auto;
+  padding: 36px 44px;
+  font-size: 17px;
+}
+
+.rulesModal h2 {
+  margin: 12px 0 8px;
+  font-size: 28px;
+}
+
+.rulesModal p,
+.rulesModal .rulesList {
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+.rulesModal .rulesList {
+  gap: 16px;
+  padding-left: 22px;
+}
+
+.rulesModal svg {
+  width: 40px;
+  height: 40px;
+}
+
 .confirmModal p {
   color: var(--muted);
   line-height: 1.5;
@@ -1991,24 +2543,153 @@ h2 {
 }
 
 .saasShell {
-  display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
+  --sidebar-w: 264px;
   min-height: 100vh;
   background: #f8fafc;
   color: #0f172a;
 }
 
+/* The sidebar is fixed to the viewport (it never moves with the page) and can be collapsed to an icon rail. */
 .saasSidebar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  height: 100vh;
+  width: var(--sidebar-w);
+  height: 100dvh;
   padding: 18px;
+  overflow-x: hidden;
+  overflow-y: auto;
   border-right: 1px solid rgba(226, 232, 240, 0.8);
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(18px);
+  transition:
+    width 0.2s ease,
+    padding 0.2s ease,
+    transform 0.22s ease;
+}
+
+.saasSidebarHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.saasSidebarHead .saasBrand {
+  min-width: 0;
+}
+
+.sidebarToggle,
+.menuToggle {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #475569;
+}
+
+.sidebarToggle:hover,
+.menuToggle:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.menuToggle {
+  display: none;
+}
+
+.saasTopbarTitle {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebarBackdrop {
+  display: none;
+}
+
+/* Desktop: content sits to the right of the fixed sidebar. */
+.saasMain {
+  margin-left: var(--sidebar-w);
+  transition: margin-left 0.2s ease;
+}
+
+@media (min-width: 901px) {
+  .saasShell.collapsed {
+    --sidebar-w: 76px;
+  }
+
+  .saasShell.collapsed .saasSidebar {
+    padding: 18px 12px;
+  }
+
+  .saasShell.collapsed .saasSidebarHead {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .saasShell.collapsed .saasBrand > span:last-child,
+  .saasShell.collapsed .saasNavItem span,
+  .saasShell.collapsed .saasSidebarProfile > div {
+    display: none;
+  }
+
+  .saasShell.collapsed .saasNavItem {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .saasShell.collapsed .saasNavItem:hover {
+    transform: none;
+  }
+
+  .saasShell.collapsed .saasSidebarProfile {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding: 8px 0;
+  }
+}
+
+/* Tablet/mobile: the sidebar becomes an off-canvas drawer opened from the top bar. */
+@media (max-width: 900px) {
+  .saasMain {
+    margin-left: 0;
+  }
+
+  .saasSidebar {
+    width: 264px;
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+
+  .saasShell.mobileOpen .saasSidebar {
+    transform: translateX(0);
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.3);
+  }
+
+  .saasShell.mobileOpen .sidebarBackdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    display: block;
+    background: rgba(15, 23, 42, 0.4);
+  }
+
+  .sidebarToggle {
+    display: none;
+  }
+
+  .menuToggle {
+    display: grid;
+  }
 }
 
 .saasBrand {
@@ -2179,7 +2860,7 @@ h2 {
   padding: 8px;
   background: #ffffff;
   box-shadow: 0 24px 70px rgba(15, 23, 42, 0.16);
-  animation: softSlideUp 0.18s ease both;
+  animation: softSlideUp 0.18s ease backwards;
 }
 
 .userDropdown a,
@@ -2250,7 +2931,7 @@ h2 {
   border-radius: 16px;
   background: #ffffff;
   box-shadow: 0 16px 46px rgba(15, 23, 42, 0.07);
-  animation: softSlideUp 0.36s ease both;
+  animation: softSlideUp 0.36s ease backwards;
 }
 
 .saasStatCard {
@@ -2331,6 +3012,38 @@ h2 {
 .modernCardHeader h3 {
   margin: 0;
   font-size: 18px;
+}
+
+.chartsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.chartFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.chartFilters .wideFilter {
+  width: 240px;
+}
+
+.chartsRow {
+  transition: opacity 150ms ease;
+}
+
+.chartsRow.updating {
+  opacity: 0.55;
+}
+
+.chartHint {
+  display: block;
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 12px;
 }
 
 .donutWrap {
@@ -2500,10 +3213,6 @@ h2 {
 }
 
 @media (max-width: 1180px) {
-  .saasShell {
-    grid-template-columns: 220px minmax(0, 1fr);
-  }
-
   .saasStatsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2516,33 +3225,9 @@ h2 {
 }
 
 @media (max-width: 720px) {
-  .saasShell {
-    grid-template-columns: 1fr;
-  }
-
-  .saasSidebar {
-    position: static;
-    height: auto;
-    border-right: 0;
-    border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-  }
-
-  .saasNav {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .saasNavItem.logout {
-    margin-top: 0;
-  }
-
-  .saasSidebarProfile {
-    display: none;
-  }
-
   .saasTopbar {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 16px 18px;
+    gap: 12px;
+    padding: 12px 18px;
   }
 
   .saasContent {
@@ -2658,4 +3343,241 @@ h2 {
     width: 100%;
     justify-content: center;
   }
+}
+
+.avatarBubble {
+  overflow: hidden;
+}
+
+.avatarBubble img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarActions {
+  display: grid;
+  gap: 8px;
+}
+
+.avatarActions .controlRow {
+  margin: 0;
+  gap: 8px;
+}
+
+.avatarHint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.uploadButton.busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Action bar that stays visible at the bottom of long forms. */
+.stickyActions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(10px);
+}
+
+.stickyActions span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+/* On/off switch used for enabling exam sessions. */
+.toggleSwitch {
+  position: relative;
+  flex-shrink: 0;
+  width: 46px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: #cbd5e1;
+  transition: background 0.18s ease;
+}
+
+.toggleSwitch i {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+  transition: transform 0.18s ease;
+}
+
+.toggleSwitch.on {
+  background: #16a34a;
+}
+
+.toggleSwitch.on i {
+  transform: translateX(20px);
+}
+
+.toggleSwitch:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.switchRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.navBadge {
+  min-width: 20px;
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 1px 7px;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  text-align: center;
+}
+
+@media (min-width: 901px) {
+  .saasShell.collapsed .navBadge {
+    display: none;
+  }
+}
+
+/* Approval chain and history. */
+.approvalSteps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.approvalStep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #ffffff;
+  color: var(--muted);
+}
+
+.approvalStep div {
+  display: grid;
+}
+
+.approvalStep span {
+  font-size: 12px;
+}
+
+.approvalStep.done {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.approvalStep.current {
+  border-color: rgba(217, 119, 6, 0.5);
+  background: #fffbeb;
+  color: #b45309;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.12);
+}
+
+.approvalHistory {
+  display: grid;
+  gap: 10px;
+}
+
+.approvalEntry {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.approvalEntry p {
+  margin: 2px 0;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.approvalEntry small {
+  color: var(--muted);
+}
+
+/* Approval status as a clickable badge + its history popup. */
+.badgeButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.badgeButton:hover {
+  filter: brightness(0.95);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.approvalModal {
+  width: min(100%, 680px);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.approvalDecision {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-left: 4px solid;
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.approvalDecision.approved {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.approvalDecision.rejected {
+  border-color: #dc2626;
+  background: #fef2f2;
+}
+
+.approvalDecision span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.approvalDecision p {
+  margin: 2px 0 0;
+  color: var(--ink);
+  white-space: pre-wrap;
 }

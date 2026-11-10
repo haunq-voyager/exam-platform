@@ -1,0 +1,18 @@
+{
+"Nháp": "Draft",
+"Giai đoạn": "Stage",
+"Kỳ thi theo giai đoạn": "Exams by stage",
+"Theo tháng": "By month",
+"Kỳ thi theo tháng": "Exams per month",
+"6 tháng gần nhất, tính theo ngày bắt đầu": "Last 6 months, by start date",
+"Phân bố điểm": "Score distribution",
+"Bài đã chấm, theo % điểm tối đa": "Graded attempts, by % of the maximum score",
+"{0} kỳ thi": "{0} exams",
+"{0} bài": "{0} attempts",
+"Nhập theo dạng giờ:phút ngày/tháng/năm, ví dụ 14:00 09/11/2026.": "Use hour:minute day/month/year, for example 14:00 09/11/2026.",
+"Tất cả khoa": "All departments",
+"Bộ lọc biểu đồ": "Chart filters",
+"12 tháng của năm {0}": "The 12 months of {0}",
+"Chưa có bài đã chấm": "No graded attempts yet",
+"Kết quả sẽ hiện ở đây khi có thí sinh nộp bài và được chấm.": "Results appear here once students submit and are graded."
+}

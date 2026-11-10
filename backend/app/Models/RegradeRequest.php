@@ -17,11 +17,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float|null $new_score
  * @property int|null $reviewed_by
  * @property \Illuminate\Support\Carbon|null $reviewed_at
+ * @property string|null $response
  * @property-read ExamAttempt $attempt
  * @property-read User $student
  * @property-read User|null $reviewer
  */
-#[Fillable(['exam_attempt_id', 'student_id', 'reason', 'status', 'old_score', 'new_score', 'reviewed_by', 'reviewed_at'])]
+#[Fillable(['exam_attempt_id', 'student_id', 'reason', 'status', 'old_score', 'new_score', 'reviewed_by', 'reviewed_at', 'response'])]
 class RegradeRequest extends Model
 {
     protected function casts(): array

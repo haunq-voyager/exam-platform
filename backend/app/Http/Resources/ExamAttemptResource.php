@@ -22,6 +22,11 @@ class ExamAttemptResource extends JsonResource
             'submitted_at' => $this->submitted_at?->toISOString(),
             'score' => $this->score,
             'total_points' => $this->total_points,
+            'attempt_number' => $this->attempt_number,
+            'violation_count' => $this->violation_count,
+            'is_flagged' => $this->is_flagged,
+            'is_cancelled' => $this->isCancelled(),
+            'cancel_reason' => $this->cancel_reason,
         ];
     }
 }

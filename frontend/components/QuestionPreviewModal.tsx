@@ -1,10 +1,12 @@
 "use client";
 
+
+import { tr } from "../lib/i18n";
 import { CheckCircle2, X } from "lucide-react";
 import { REVIEW_STATUS_LABEL, statusLabel } from "../lib/status-labels";
 import type { Question } from "../lib/types";
 
-const DIFFICULTY_LABEL: Record<string, string> = { easy: "Dễ", medium: "Trung bình", hard: "Khó" };
+const DIFFICULTY_LABEL: Record<string, string> = { get easy() { return tr("Dễ"); }, get medium() { return tr("Trung bình"); }, get hard() { return tr("Khó"); } };
 const STATUS_BADGE: Record<string, string> = { approved: "green", pending: "amber", rejected: "red", draft: "blue" };
 
 interface QuestionPreviewModalProps {
@@ -20,10 +22,10 @@ export function QuestionPreviewModal({ question, onClose }: QuestionPreviewModal
       <div className="previewModal" onClick={(event) => event.stopPropagation()}>
         <div className="previewModalHeader">
           <div>
-            <p className="eyebrow">Xem trước câu hỏi</p>
+            <p className="eyebrow">{tr("Xem trước câu hỏi")}</p>
             <h2 style={{ lineHeight: 1.35 }}>{question.question_text}</h2>
           </div>
-          <button className="iconButton" onClick={onClose} title="Đóng">
+          <button className="iconButton" onClick={onClose} title={tr("Đóng")}>
             <X size={16} />
           </button>
         </div>
@@ -31,7 +33,7 @@ export function QuestionPreviewModal({ question, onClose }: QuestionPreviewModal
         <div className="controlRow" style={{ margin: "0 0 16px" }}>
           <span className={`badge ${STATUS_BADGE[question.status]}`}>{statusLabel(REVIEW_STATUS_LABEL, question.status)}</span>
           <span className="badge blue">{DIFFICULTY_LABEL[question.difficulty] ?? question.difficulty}</span>
-          <span className="badge">{question.source === "ai" ? "Sinh bởi AI" : "Thủ công"}</span>
+          <span className="badge">{question.source === "ai" ? tr("Sinh bởi AI") : tr("Thủ công")}</span>
           {question.topic_name ? <span className="badge">{question.topic_name}</span> : null}
         </div>
 
@@ -46,7 +48,7 @@ export function QuestionPreviewModal({ question, onClose }: QuestionPreviewModal
 
         {question.explanation ? (
           <div className="previewExplanation">
-            <strong style={{ color: "var(--ink)" }}>Lời giải: </strong>
+            <strong style={{ color: "var(--ink)" }}>{tr("Lời giải:")} </strong>
             {question.explanation}
           </div>
         ) : null}

@@ -19,6 +19,7 @@ class ExamResource extends JsonResource
             'duration_minutes' => $this->duration_minutes,
             'shuffle_questions' => $this->shuffle_questions,
             'shuffle_options' => $this->shuffle_options,
+            'is_template' => $this->is_template,
             'question_count' => $this->whenCounted('examQuestions'),
             'questions' => ExamQuestionResource::collection($this->whenLoaded('examQuestions')),
             'created_at' => $this->created_at?->toISOString(),

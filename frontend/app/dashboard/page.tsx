@@ -1,7 +1,10 @@
 "use client";
 
+
+import { tr } from "../../lib/i18n";
+import { formatDateTime } from "../../lib/format-date";
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/RoleLink";
 import {
   AlertTriangle,
   ArrowRight,
@@ -29,7 +32,9 @@ import {
 import { useAuth } from "../../lib/auth-context";
 import { api } from "../../lib/api-client";
 import { ATTEMPT_STATUS_LABEL, EXAM_STATUS_LABEL, statusLabel } from "../../lib/status-labels";
-import type { Exam, ExamAttempt, Question, StudentExam, User } from "../../lib/types";
+import { can, canAny } from "../../lib/permissions";
+import { StaffCharts } from "../../components/StaffCharts";
+import type { Exam, ExamAttempt, Question, StudentExam, User, Workload } from "../../lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
   scheduled: "#6366F1",
@@ -38,20 +43,27 @@ const STATUS_COLORS: Record<string, string> = {
   graded: "#22C55E"
 };
 
-function monthKey(value: string | null): string {
-  if (!value) return "unknown";
-  return new Date(value).toISOString().slice(0, 7);
+const UNSCHEDULED = "unknown";
+const MONTHS = Array.from({ length: 12 }, (_, index) => String(index + 1));
+
+/** Year / month of an exam's start (local time, same as what is displayed); "unknown" when it has no schedule. */
+function examYear(value: string | null): string {
+  return value ? String(new Date(value).getFullYear()) : UNSCHEDULED;
 }
 
-function monthLabel(value: string): string {
-  if (value === "all") return "Tất cả tháng";
-  if (value === "unknown") return "Chưa có lịch";
-  return new Intl.DateTimeFormat("vi-VN", { month: "long", year: "numeric" }).format(new Date(`${value}-01T00:00:00`));
+function examMonth(value: string | null): string {
+  return value ? String(new Date(value).getMonth() + 1) : UNSCHEDULED;
+}
+
+function periodLabel(year: string, month: string): string {
+  if (year === UNSCHEDULED) return tr("Chưa có lịch");
+  if (year === "all" && month === "all") return tr("Tất cả thời gian");
+  if (month === "all") return tr("Năm {0}", year);
+  return year === "all" ? tr("Tháng {0}", month) : tr("Tháng {0}/{1}", month, year);
 }
 
 function formatDate(value: string | null | undefined): string {
-  if (!value) return "Chưa có thời gian";
-  return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(value));
+  return value ? formatDateTime(value) : tr("Chưa có thời gian");
 }
 
 function StatCard({
@@ -87,10 +99,10 @@ function EmptyDashboardState() {
       <span>
         <Sparkles size={26} />
       </span>
-      <h3>Chưa có dữ liệu để thống kê</h3>
-      <p>Khi bạn được gán kỳ thi hoặc hoàn thành bài làm, biểu đồ và hoạt động gần đây sẽ tự động xuất hiện ở đây.</p>
+      <h3>{tr("Chưa có dữ liệu để thống kê")}</h3>
+      <p>{tr("Khi bạn được gán kỳ thi hoặc hoàn thành bài làm, biểu đồ và hoạt động gần đây sẽ tự động xuất hiện ở đây.")}</p>
       <Link className="primaryButton" href="/dashboard/student-exams">
-        Xem đề thi
+        {tr("Xem đề thi")}
         <ArrowRight size={16} />
       </Link>
     </div>
@@ -106,7 +118,9 @@ export default function DashboardOverviewPage() {
   const [openSessionCount, setOpenSessionCount] = useState(0);
   const [studentExams, setStudentExams] = useState<StudentExam[]>([]);
   const [attempts, setAttempts] = useState<ExamAttempt[]>([]);
+  const [yearFilter, setYearFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
+  const [workload, setWorkload] = useState<Workload | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -114,26 +128,30 @@ export default function DashboardOverviewPage() {
     async function load() {
       setLoading(true);
       try {
-        if (user!.role === "admin") {
-          const [usersResponse, questionsResponse, examsResponse, openSessionsResponse] = await Promise.all([
-            api.get<{ data: User[] }>("/users", { per_page: 1 }),
-            api.get<{ data: Question[] }>("/questions", { per_page: 1 }),
-            api.get<{ data: Exam[] }>("/exams"),
-            api.get<{ data: unknown[] }>("/exam-sessions", { status: "open", per_page: 1 })
-          ]);
-          setUserCount((usersResponse as unknown as { meta?: { total?: number } }).meta?.total ?? usersResponse.data.length);
-          setQuestionCount((questionsResponse as unknown as { meta?: { total?: number } }).meta?.total ?? questionsResponse.data.length);
-          setExams(examsResponse.data);
-          setOpenSessionCount((openSessionsResponse as unknown as { meta?: { total?: number } }).meta?.total ?? openSessionsResponse.data.length);
-        } else if (user!.role === "teacher") {
-          const [questionsResponse, examsResponse, openSessionsResponse] = await Promise.all([
-            api.get<{ data: Question[] }>("/questions", { per_page: 1 }),
-            api.get<{ data: Exam[] }>("/exams"),
-            api.get<{ data: unknown[] }>("/exam-sessions", { status: "open", per_page: 1 })
-          ]);
-          setQuestionCount((questionsResponse as unknown as { meta?: { total?: number } }).meta?.total ?? questionsResponse.data.length);
-          setExams(examsResponse.data);
-          setOpenSessionCount((openSessionsResponse as unknown as { meta?: { total?: number } }).meta?.total ?? openSessionsResponse.data.length);
+        if (user!.role !== "student") {
+          // Each figure is only requested when the role may see it (a department head has no question bank access).
+          const total = (response: unknown, fallback: number) => (response as { meta?: { total?: number } }).meta?.total ?? fallback;
+          const me = user!;
+          if (can(me, "users.view")) {
+            const response = await api.get<{ data: User[] }>("/users", { per_page: 1 });
+            setUserCount(total(response, response.data.length));
+          }
+          if (can(me, "questions.manage")) {
+            const response = await api.get<{ data: Question[] }>("/questions", { per_page: 1 });
+            setQuestionCount(total(response, response.data.length));
+          }
+          if (can(me, "exams.manage")) {
+            const response = await api.get<{ data: Exam[] }>("/exams");
+            setExams(response.data);
+          }
+          if (canAny(me, "sessions.proctor", "regrades.review", "feedback.respond")) {
+            const response = await api.get<{ data: Workload }>("/workload");
+            setWorkload(response.data);
+          }
+          if (canAny(me, "sessions.view", "sessions.create", "sessions.update")) {
+            const response = await api.get<{ data: unknown[] }>("/exam-sessions", { status: "open", per_page: 1 });
+            setOpenSessionCount(total(response, response.data.length));
+          }
         } else {
           const [studentExamResponse, attemptsResponse] = await Promise.all([
             api.get<{ data: StudentExam[] }>("/student/exams"),
@@ -150,13 +168,19 @@ export default function DashboardOverviewPage() {
     load();
   }, [user]);
 
-  const availableMonths = useMemo(() => {
-    return Array.from(new Set(studentExams.map((exam) => monthKey(exam.start_at)))).sort().reverse();
+  // Years that actually have exams (newest first); "unknown" is kept last for exams without a schedule.
+  const availableYears = useMemo(() => {
+    const years = Array.from(new Set(studentExams.map((exam) => examYear(exam.start_at))));
+    return years.filter((year) => year !== UNSCHEDULED).sort().reverse().concat(years.includes(UNSCHEDULED) ? [UNSCHEDULED] : []);
   }, [studentExams]);
 
   const filteredStudentExams = useMemo(() => {
-    return monthFilter === "all" ? studentExams : studentExams.filter((exam) => monthKey(exam.start_at) === monthFilter);
-  }, [monthFilter, studentExams]);
+    return studentExams.filter(
+      (exam) =>
+        (yearFilter === "all" || examYear(exam.start_at) === yearFilter) &&
+        (monthFilter === "all" || examMonth(exam.start_at) === monthFilter)
+    );
+  }, [yearFilter, monthFilter, studentExams]);
 
   const completedExams = useMemo(() => filteredStudentExams.filter((exam) => exam.my_attempt_status === "graded"), [filteredStudentExams]);
 
@@ -170,7 +194,7 @@ export default function DashboardOverviewPage() {
     return ["scheduled", "open", "closed", "graded"]
       .map((status) => ({
         key: status,
-        name: status === "graded" ? "Đã chấm" : statusLabel(EXAM_STATUS_LABEL, status),
+        name: status === "graded" ? tr("Đã chấm") : statusLabel(EXAM_STATUS_LABEL, status),
         value: filteredStudentExams.filter((exam) => (status === "graded" ? exam.my_attempt_status === "graded" : exam.status === status)).length
       }))
       .filter((item) => item.value > 0);
@@ -181,7 +205,7 @@ export default function DashboardOverviewPage() {
       .filter((attempt) => attempt.score !== null)
       .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
       .map((attempt, index) => ({
-        label: `Lần ${index + 1}`,
+        label: tr("Lần {0}", index + 1),
         score: Number(attempt.score ?? 0),
         date: formatDate(attempt.started_at)
       }));
@@ -190,15 +214,15 @@ export default function DashboardOverviewPage() {
   const activities = useMemo(() => {
     const fromAttempts = attempts.slice(0, 5).map((attempt) => ({
       id: `attempt-${attempt.id}`,
-      title: attempt.status === "graded" ? "Đã có kết quả bài thi" : "Cập nhật lượt làm bài",
-      description: `${attempt.exam_title ?? "Bài thi"} · ${statusLabel(ATTEMPT_STATUS_LABEL, attempt.status)}`,
+      title: attempt.status === "graded" ? tr("Đã có kết quả bài thi") : tr("Cập nhật lượt làm bài"),
+      description: `${attempt.exam_title ?? tr("Bài thi")} · ${statusLabel(ATTEMPT_STATUS_LABEL, attempt.status)}`,
       time: formatDate(attempt.submitted_at ?? attempt.started_at),
       tone: attempt.status === "graded" ? "green" : "blue"
     }));
 
     const fromExams = filteredStudentExams.slice(0, 3).map((exam) => ({
       id: `exam-${exam.id}`,
-      title: exam.status === "open" ? "Kỳ thi đang mở" : "Kỳ thi được giao",
+      title: exam.status === "open" ? tr("Kỳ thi đang mở") : tr("Kỳ thi được giao"),
       description: `${exam.title} · ${statusLabel(EXAM_STATUS_LABEL, exam.status)}`,
       time: formatDate(exam.start_at),
       tone: exam.status === "open" ? "blue" : "violet"
@@ -210,7 +234,7 @@ export default function DashboardOverviewPage() {
   if (!user) return null;
 
   if (loading) {
-    return <div className="modernEmpty">Đang tải dữ liệu...</div>;
+    return <div className="modernEmpty">{tr("Đang tải dữ liệu...")}</div>;
   }
 
   if (user.role !== "student") {
@@ -218,18 +242,23 @@ export default function DashboardOverviewPage() {
       <div className="modernDashboard">
         <section className="dashboardHero">
           <div>
-            <p className="eyebrow">ExamHub overview</p>
-            <h2>{user.role === "admin" ? "Toàn cảnh vận hành hệ thống" : "Toàn cảnh giảng dạy của bạn"}</h2>
-            <p>Theo dõi ngân hàng câu hỏi, đề thi và các kỳ thi đang diễn ra chỉ trong một màn hình.</p>
+            <p className="eyebrow">{tr("ExamHub overview")}</p>
+            <h2>{user.role === "admin" ? tr("Toàn cảnh vận hành hệ thống") : user.role === "teacher" ? tr("Việc cần xử lý hôm nay") : tr("Toàn cảnh công việc của bạn")}</h2>
+            <p>{user.role === "teacher" ? tr("Các kỳ thi bạn được phân công: thí sinh đang làm bài, yêu cầu phúc khảo và phản hồi cần trả lời.") : tr("Theo dõi ngân hàng câu hỏi, đề thi và các kỳ thi đang diễn ra chỉ trong một màn hình.")}</p>
           </div>
         </section>
 
         <section className="saasStatsGrid">
-          {user.role === "admin" ? <StatCard icon={Users} label="Người dùng" value={userCount} hint="Tài khoản trong hệ thống" tone="blue" /> : null}
-          <StatCard icon={FileQuestion} label="Câu hỏi" value={questionCount} hint="Ngân hàng hiện có" tone="violet" />
-          <StatCard icon={ClipboardList} label="Đề thi" value={exams.length} hint="Đề đã tạo" tone="green" />
-          <StatCard icon={AlertTriangle} label="Kỳ thi đang mở" value={openSessionCount} hint="Cần theo dõi" tone="amber" />
+          {can(user, "users.view") ? <StatCard icon={Users} label={tr("Người dùng")} value={userCount} hint={tr("Tài khoản trong hệ thống")} tone="blue" /> : null}
+          {can(user, "questions.manage") ? <StatCard icon={FileQuestion} label={tr("Câu hỏi")} value={questionCount} hint={tr("Ngân hàng hiện có")} tone="violet" /> : null}
+          {can(user, "exams.manage") ? <StatCard icon={ClipboardList} label={tr("Đề thi")} value={exams.length} hint={tr("Đề đã tạo")} tone="green" /> : null}
+          {canAny(user, "sessions.view", "sessions.create", "sessions.update") ? <StatCard icon={AlertTriangle} label={tr("Kỳ thi đang mở")} value={openSessionCount} hint={tr("Cần theo dõi")} tone="amber" /> : null}
+          {workload && can(user, "sessions.proctor") ? <StatCard icon={AlertTriangle} label={tr("Đang làm bài")} value={workload.in_progress_attempts} hint={tr("{0} kỳ thi bạn coi", workload.running_sessions)} tone="green" /> : null}
+          {workload && can(user, "regrades.review") ? <StatCard icon={ClipboardList} label={tr("Phúc khảo chờ xử lý")} value={workload.pending_regrades} hint={tr("Yêu cầu của thí sinh")} tone="violet" /> : null}
+          {workload && can(user, "feedback.respond") ? <StatCard icon={FileQuestion} label={tr("Phản hồi chưa trả lời")} value={workload.unanswered_feedback} hint={tr("Từ thí sinh")} tone="blue" /> : null}
         </section>
+
+        {canAny(user, "sessions.view", "sessions.proctor", "regrades.review", "feedback.respond") ? <StaffCharts /> : null}
       </div>
     );
   }
@@ -240,21 +269,40 @@ export default function DashboardOverviewPage() {
     <div className="modernDashboard">
       <section className="dashboardHero">
         <div>
-          <p className="eyebrow">ExamHub overview</p>
-          <h2>Theo dõi kỳ thi, điểm số và tiến trình học tập</h2>
-          <p>Một dashboard gọn, sáng và tập trung vào việc bạn cần làm tiếp theo.</p>
+          <p className="eyebrow">{tr("ExamHub overview")}</p>
+          <h2>{tr("Theo dõi kỳ thi, điểm số và tiến trình học tập")}</h2>
+          <p>{tr("Một dashboard gọn, sáng và tập trung vào việc bạn cần làm tiếp theo.")}</p>
         </div>
-        <label className="field compactMonth">
-          Lọc theo tháng
-          <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)}>
-            <option value="all">Tất cả tháng</option>
-            {availableMonths.map((month) => (
-              <option value={month} key={month}>
-                {monthLabel(month)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="periodFilters">
+          <label className="field compactMonth">
+            {tr("Năm")}
+            <select
+              value={yearFilter}
+              onChange={(event) => {
+                setYearFilter(event.target.value);
+                if (event.target.value === UNSCHEDULED) setMonthFilter("all");
+              }}
+            >
+              <option value="all">{tr("Tất cả năm")}</option>
+              {availableYears.map((year) => (
+                <option value={year} key={year}>
+                  {year === UNSCHEDULED ? tr("Chưa có lịch") : tr("Năm {0}", year)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field compactMonth">
+            {tr("Tháng")}
+            <select value={monthFilter} onChange={(event) => setMonthFilter(event.target.value)} disabled={yearFilter === UNSCHEDULED}>
+              <option value="all">{tr("Tất cả tháng")}</option>
+              {MONTHS.map((month) => (
+                <option value={month} key={month}>
+                  {tr("Tháng")} {month}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </section>
 
       {!hasData ? (
@@ -262,18 +310,18 @@ export default function DashboardOverviewPage() {
       ) : (
         <>
           <section className="saasStatsGrid">
-            <StatCard icon={CalendarDays} label="Kỳ thi" value={filteredStudentExams.length} hint={monthLabel(monthFilter)} tone="blue" />
-            <StatCard icon={ClipboardList} label="Đang mở" value={filteredStudentExams.filter((exam) => exam.status === "open").length} hint="Có thể vào thi" tone="violet" />
-            <StatCard icon={Trophy} label="Đã thi" value={completedExams.length} hint="Đã có kết quả" tone="green" />
-            <StatCard icon={Medal} label="Điểm TB" value={averageScore} hint="Theo lịch sử điểm" tone="amber" />
+            <StatCard icon={CalendarDays} label={tr("Kỳ thi")} value={filteredStudentExams.length} hint={periodLabel(yearFilter, monthFilter)} tone="blue" />
+            <StatCard icon={ClipboardList} label={tr("Đang mở")} value={filteredStudentExams.filter((exam) => exam.status === "open").length} hint={tr("Có thể vào thi")} tone="violet" />
+            <StatCard icon={Trophy} label={tr("Đã thi")} value={completedExams.length} hint={tr("Đã có kết quả")} tone="green" />
+            <StatCard icon={Medal} label={tr("Điểm TB")} value={averageScore} hint={tr("Theo lịch sử điểm")} tone="amber" />
           </section>
 
           <section className="analyticsGrid">
             <article className="modernCard">
               <div className="modernCardHeader">
                 <div>
-                  <p className="eyebrow">Trạng thái</p>
-                  <h3>Phân bố kỳ thi</h3>
+                  <p className="eyebrow">{tr("Trạng thái")}</p>
+                  <h3>{tr("Phân bố kỳ thi")}</h3>
                 </div>
               </div>
               {statusData.length === 0 ? (
@@ -305,15 +353,15 @@ export default function DashboardOverviewPage() {
             <article className="modernCard">
               <div className="modernCardHeader">
                 <div>
-                  <p className="eyebrow">Điểm số</p>
-                  <h3>Điểm theo thời gian</h3>
+                  <p className="eyebrow">{tr("Điểm số")}</p>
+                  <h3>{tr("Điểm theo thời gian")}</h3>
                 </div>
               </div>
               {scoreData.length === 0 ? (
                 <div className="miniEmpty">
                   <CheckCircle2 size={24} />
-                  <strong>Chưa có điểm lịch sử</strong>
-                  <span>Hoàn thành bài thi đầu tiên để biểu đồ xuất hiện.</span>
+                  <strong>{tr("Chưa có điểm lịch sử")}</strong>
+                  <span>{tr("Hoàn thành bài thi đầu tiên để biểu đồ xuất hiện.")}</span>
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height={260}>
@@ -333,13 +381,13 @@ export default function DashboardOverviewPage() {
             <article className="modernCard">
               <div className="modernCardHeader">
                 <div>
-                  <p className="eyebrow">Hoạt động</p>
-                  <h3>Hoạt động gần đây</h3>
+                  <p className="eyebrow">{tr("Hoạt động")}</p>
+                  <h3>{tr("Hoạt động gần đây")}</h3>
                 </div>
               </div>
               <div className="activityFeed">
                 {activities.length === 0 ? (
-                  <div className="miniEmpty">Chưa có hoạt động mới.</div>
+                  <div className="miniEmpty">{tr("Chưa có hoạt động mới.")}</div>
                 ) : (
                   activities.map((activity) => (
                     <div className={`activityItem ${activity.tone}`} key={activity.id}>
@@ -358,11 +406,11 @@ export default function DashboardOverviewPage() {
             <article className="modernCard nextExamCard">
               <div className="modernCardHeader">
                 <div>
-                  <p className="eyebrow">Tiếp theo</p>
-                  <h3>Kỳ thi cần chú ý</h3>
+                  <p className="eyebrow">{tr("Tiếp theo")}</p>
+                  <h3>{tr("Kỳ thi cần chú ý")}</h3>
                 </div>
                 <Link className="linkButton" href="/dashboard/student-exams">
-                  Xem tất cả
+                  {tr("Xem tất cả")}
                 </Link>
               </div>
               <div className="examMiniList">
@@ -370,7 +418,7 @@ export default function DashboardOverviewPage() {
                   <Link href={`/dashboard/student-exams/${exam.id}`} className="examMiniItem" key={exam.id}>
                     <span>{exam.title}</span>
                     <small>
-                      {exam.question_count} câu · {statusLabel(EXAM_STATUS_LABEL, exam.status)}
+                      {exam.question_count} {tr("câu ·")} {statusLabel(EXAM_STATUS_LABEL, exam.status)}
                     </small>
                     <ArrowRight size={16} />
                   </Link>

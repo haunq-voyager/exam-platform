@@ -1,0 +1,9 @@
+{
+    "The given data was invalid.": "Dữ liệu nhập vào chưa hợp lệ.",
+    "(and :count more error)": "(và :count lỗi khác)",
+    "(and :count more errors)": "(và :count lỗi khác)",
+    "Unauthenticated.": "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.",
+    "This action is unauthorized.": "Bạn không có quyền thực hiện thao tác này.",
+    "Not Found.": "Không tìm thấy dữ liệu.",
+    "Too Many Attempts.": "Bạn thao tác quá nhanh, vui lòng thử lại sau."
+}

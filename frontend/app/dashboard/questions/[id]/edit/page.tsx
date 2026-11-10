@@ -1,8 +1,11 @@
 "use client";
 
+
+import { tr } from "../../../../../lib/i18n";
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import Link from "@/components/RoleLink";
+import { useParams } from "next/navigation";
+import { useRouter } from "@/lib/use-role-router";
 import { ArrowLeft } from "lucide-react";
 import { api, ApiError } from "../../../../../lib/api-client";
 import { useToast } from "../../../../../lib/toast";
@@ -56,15 +59,15 @@ export default function EditQuestionPage() {
         correct_answer: form.correct_answer,
         explanation: form.explanation || null
       });
-      showToast("Đã lưu thay đổi câu hỏi.");
+      showToast(tr("Đã lưu thay đổi câu hỏi."));
       router.push("/dashboard/questions");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Không thể lưu câu hỏi.");
+      setError(err instanceof ApiError ? err.message : tr("Không thể lưu câu hỏi."));
     }
   }
 
   if (loading || !initialValue) {
-    return <div className="emptyState">Đang tải...</div>;
+    return <div className="emptyState">{tr("Đang tải...")}</div>;
   }
 
   return (
@@ -73,10 +76,10 @@ export default function EditQuestionPage() {
         <div>
           <Link className="approveButton" href="/dashboard/questions" style={{ marginBottom: 10 }}>
             <ArrowLeft size={16} />
-            Danh sách câu hỏi
+            {tr("Danh sách câu hỏi")}
           </Link>
-          <p className="eyebrow">Ngân hàng câu hỏi</p>
-          <h1>Sửa câu hỏi</h1>
+          <p className="eyebrow">{tr("Ngân hàng câu hỏi")}</p>
+          <h1>{tr("Sửa câu hỏi")}</h1>
         </div>
       </header>
 
@@ -84,8 +87,8 @@ export default function EditQuestionPage() {
         <QuestionForm
           topics={topics}
           initialValue={initialValue}
-          submitLabel="Lưu thay đổi"
-          submittingLabel="Đang lưu..."
+          submitLabel={tr("Lưu thay đổi")}
+          submittingLabel={tr("Đang lưu...")}
           onSubmit={handleSubmit}
           error={error}
         />

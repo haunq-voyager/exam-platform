@@ -9,6 +9,7 @@ use App\Actions\Users\UpdateUserAction;
 use App\Data\Users\CreateUserDto;
 use App\Data\Users\ListUsersDto;
 use App\Data\Users\UpdateUserDto;
+use App\Enums\UserRole;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +32,19 @@ class UserController extends BaseController
             data: UserResource::collection($users),
             message: 'Users retrieved successfully.',
         );
+    }
+
+    /** Distinct majors currently set on students, for filters/pickers. */
+    public function majors(): JsonResponse
+    {
+        $majors = User::query()
+            ->where('role', UserRole::Student)
+            ->whereNotNull('major')
+            ->distinct()
+            ->orderBy('major')
+            ->pluck('major');
+
+        return $this->respondSuccess(data: $majors->values()->all(), message: 'Majors retrieved successfully.');
     }
 
     public function store(CreateUserDto $dto): JsonResponse

@@ -30,9 +30,9 @@ class ExamSessionController extends BaseController
         private GetExamSessionStatsAction $getExamSessionStatsAction,
     ) {}
 
-    public function index(ListExamSessionsDto $dto): JsonResponse
+    public function index(ListExamSessionsDto $dto, Request $request): JsonResponse
     {
-        $sessions = $this->listExamSessionsAction->execute($dto);
+        $sessions = $this->listExamSessionsAction->execute($dto, $request->user());
 
         return $this->respondSuccess(data: ExamSessionResource::collection($sessions), message: 'Exam sessions retrieved successfully.');
     }
@@ -52,6 +52,7 @@ class ExamSessionController extends BaseController
     {
         $examSession->load([
             'creator',
+            'department',
             'teachers',
             'exam' => fn ($query) => $query->withCount('examQuestions'),
             'assignments.student',
@@ -60,9 +61,9 @@ class ExamSessionController extends BaseController
         return $this->respondSuccess(data: ExamSessionResource::make($examSession), message: 'Exam session retrieved successfully.');
     }
 
-    public function update(UpdateExamSessionDto $dto, ExamSession $examSession): JsonResponse
+    public function update(UpdateExamSessionDto $dto, ExamSession $examSession, Request $request): JsonResponse
     {
-        $examSession = $this->updateExamSessionAction->execute($examSession, $dto);
+        $examSession = $this->updateExamSessionAction->execute($examSession, $dto, $request->user());
 
         return $this->respondSuccess(data: ExamSessionResource::make($examSession), message: 'Exam session updated successfully.');
     }

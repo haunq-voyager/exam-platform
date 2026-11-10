@@ -8,9 +8,11 @@ import type { User } from "./types";
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  register: (name: string, email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
+  /** Replace the cached current user (e.g. after the profile picture changed). */
+  setCurrentUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -34,10 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<User> => {
     const response = await api.post<{ data: { user: User; token: string } }>("/auth/login", { email, password });
     setToken(response.data.token);
-    setUser(response.data.user);
+    // The login response does not carry the permissions (only /auth/me does), so load the full profile.
+    const me = await api.get<{ data: User }>("/auth/me");
+    setUser(me.data);
+    return me.data;
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
@@ -47,7 +52,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password
     });
     setToken(response.data.token);
-    setUser(response.data.user);
+    const me = await api.get<{ data: User }>("/auth/me");
+    setUser(me.data);
+    return me.data;
   }, []);
 
   const logout = useCallback(async () => {
@@ -62,7 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
-  const value = useMemo(() => ({ user, isLoading, login, register, logout }), [user, isLoading, login, register, logout]);
+  const value = useMemo(
+    () => ({ user, isLoading, login, register, logout, setCurrentUser: setUser }),
+    [user, isLoading, login, register, logout]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

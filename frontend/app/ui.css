@@ -1,0 +1,1281 @@
+/*
+ * Design-system layer, loaded after globals.css. It applies the interface rules the project follows:
+ * - motion: interactive states are CSS transitions of named properties (never `all`), press = scale 0.96 / 150ms /
+ *   ease-out, hover only where hover exists, page entrances stagger 100ms (opacity + 12px + 4px blur, 300ms) and
+ *   fall back to a plain fade under prefers-reduced-motion;
+ * - focus: one visible 2px ring (contrast >= 3:1) on every control, never `outline: none` without a replacement;
+ * - typography: sizes in rem, unitless line-heights, tabular numbers in data, balanced headings, pretty paragraphs,
+ *   0.05em tracking on small uppercase labels;
+ * - depth: layered transparent box-shadow instead of borders where a border only creates depth.
+ */
+
+:root {
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --focus-ring: #1d4ed8; /* 6.7:1 on white, 3:1+ on the tinted surfaces used here */
+
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+
+  --shadow-border: 0 0 0 1px oklch(0 0 0 / 0.06), 0 1px 2px -1px oklch(0 0 0 / 0.06), 0 2px 4px 0 oklch(0 0 0 / 0.04);
+  --shadow-border-hover: 0 0 0 1px oklch(0 0 0 / 0.08), 0 1px 2px -1px oklch(0 0 0 / 0.08), 0 2px 4px 0 oklch(0 0 0 / 0.06);
+
+  --text-caption: 0.8125rem;
+  --text-body: 0.875rem;
+  --text-heading: 1.125rem;
+  --text-title: 1.5rem;
+}
+
+html {
+  scroll-padding-block-start: 88px; /* sticky top bar: a focused element is never hidden under it */
+  scroll-padding-block-end: 24px;
+}
+
+body {
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+/* ---------- Typography ---------- */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  overflow-wrap: break-word;
+}
+
+h1 {
+  font-size: var(--text-title);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+h2 {
+  font-size: var(--text-heading);
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+}
+
+p,
+li,
+.reviewEmpty {
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+}
+
+.eyebrow,
+.sideTitle,
+.table th {
+  letter-spacing: 0.05em;
+}
+
+/* Numbers that change or line up in columns. */
+.table td,
+.table th,
+.timer,
+.badge,
+.reviewChip,
+.groupScore,
+.historyScore,
+.historyRowScore,
+.paletteDot,
+.navBadge,
+.pager,
+.tableMeta,
+.kpiValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.badge,
+.reviewChip,
+.navBadge {
+  white-space: nowrap;
+}
+
+/* ---------- Focus ---------- */
+a:focus-visible,
+button:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="switch"]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+main:focus {
+  outline: none; /* programmatic focus target on route change, not an interactive control */
+}
+
+.skipLink {
+  position: fixed;
+  inset-block-start: 12px;
+  inset-inline-start: -9999px;
+  z-index: 100;
+  border-radius: var(--radius-control);
+  padding: 10px 16px;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.skipLink:focus {
+  inset-inline-start: 12px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- Buttons: hover, press, focus, disabled ---------- */
+.primaryButton,
+.approveButton,
+.dangerButton,
+.iconButton,
+.linkButton,
+.segment,
+.tabButton,
+.badgeButton,
+.toggleSwitch,
+.sidebarToggle,
+.menuToggle,
+.userMenuButton,
+.saasNavItem,
+.uploadButton {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition-property: background-color, border-color, color, box-shadow, scale, translate, filter, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.primaryButton:not(:disabled):active,
+.approveButton:not(:disabled):active,
+.dangerButton:not(:disabled):active,
+.iconButton:not(:disabled):active,
+.segment:not(:disabled):active,
+.tabButton:not(:disabled):active,
+.badgeButton:not(:disabled):active,
+.toggleSwitch:not(:disabled):active,
+.sidebarToggle:active,
+.menuToggle:active,
+.userMenuButton:active,
+.uploadButton:active {
+  scale: 0.96;
+}
+
+@media (hover: hover) {
+  .primaryButton:not(:disabled):hover {
+    translate: 0 -1px;
+    filter: brightness(1.07);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.28);
+  }
+
+  .primaryButton:not(:disabled):active {
+    translate: 0 0;
+  }
+
+  .approveButton:not(:disabled):hover,
+  .uploadButton:hover {
+    filter: brightness(0.97);
+    box-shadow: var(--shadow-border-hover);
+  }
+
+  .dangerButton:not(:disabled):hover {
+    translate: 0 -1px;
+    filter: brightness(1.06);
+  }
+
+  .iconButton:not(:disabled):hover,
+  .sidebarToggle:hover,
+  .menuToggle:hover {
+    background-color: #eef2ff;
+    box-shadow: var(--shadow-border-hover);
+  }
+
+  .linkButton:not(:disabled):hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .segment:not(.active):hover,
+  .tabButton:not(.active):hover {
+    background-color: #f1f5f9;
+  }
+}
+
+:is(.primaryButton, .approveButton, .dangerButton, .iconButton, .linkButton, .segment, .tabButton, .toggleSwitch):disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  filter: none;
+  box-shadow: none;
+}
+
+/* A button that is waiting for the server (add aria-busy="true"). */
+:is(.primaryButton, .approveButton, .dangerButton)[aria-busy="true"] {
+  position: relative;
+  pointer-events: none;
+  cursor: progress;
+}
+
+:is(.primaryButton, .approveButton, .dangerButton)[aria-busy="true"]::after {
+  width: 14px;
+  height: 14px;
+  margin-inline-start: 8px;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  border-radius: 50%;
+  content: "";
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Optical alignment: a button with an icon on its leading side gets 2px less padding on that side. */
+.primaryButton:has(> svg:first-child),
+.approveButton:has(> svg:first-child),
+.dangerButton:has(> svg:first-child) {
+  padding-inline-start: 14px;
+}
+
+/* ---------- Surfaces ---------- */
+.panel {
+  animation: none; /* entrances are staggered at page level */
+  border: 1px solid transparent;
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-border);
+}
+
+/* ---------- Page entrance ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .pageEnter > * {
+    animation: enterUp 300ms var(--ease-out) backwards;
+  }
+
+  .pageEnter > *:nth-child(2) {
+    animation-delay: 100ms;
+  }
+
+  .pageEnter > *:nth-child(3) {
+    animation-delay: 200ms;
+  }
+
+  .pageEnter > *:nth-child(n + 4) {
+    animation-delay: 300ms;
+  }
+
+  .tableBody tr.rowEnter {
+    animation: enterFade 180ms ease-out backwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pageEnter > * {
+    animation: enterFade 150ms ease-out backwards;
+  }
+}
+
+@keyframes enterUp {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+    filter: blur(4px);
+  }
+}
+
+@keyframes enterFade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---------- Breadcrumb ---------- */
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-caption);
+}
+
+.breadcrumbs li {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  color: #475569; /* 7.6:1 on the top bar */
+}
+
+.breadcrumbs li + li::before {
+  margin-inline: 6px;
+  color: #94a3b8;
+  content: "/";
+}
+
+.breadcrumbs a {
+  border-radius: 6px;
+  padding: 2px 4px;
+  color: #334155;
+  transition-property: background-color, color;
+  transition-duration: 100ms;
+  transition-timing-function: ease-out;
+}
+
+@media (hover: hover) {
+  .breadcrumbs a:hover {
+    background-color: #eef2ff;
+    color: #4338ca;
+  }
+}
+
+.breadcrumbs [aria-current="page"] {
+  max-width: 36ch;
+  overflow: hidden;
+  color: #0f172a;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Data tables ---------- */
+.tableToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-block-end: 14px;
+}
+
+.tableSearch {
+  position: relative;
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+
+.tableSearch svg {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 12px;
+  translate: 0 -50%;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.tableSearch input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-control);
+  padding-inline: 38px 12px;
+  background: #ffffff;
+  color: var(--ink);
+  transition-property: border-color, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.tableSearch input:hover {
+  border-color: #94a3b8;
+}
+
+.tableFilter {
+  display: grid;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.tableFilter span {
+  color: #475569;
+  font-size: var(--text-caption);
+  font-weight: 700;
+}
+
+.tableFilter select,
+.tableFilter input {
+  min-height: 40px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-control);
+  padding-inline: 10px;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.tableToolbarEnd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-inline-start: auto;
+}
+
+.tableMeta {
+  color: #475569;
+  font-size: var(--text-caption);
+}
+
+.tableWrap {
+  overflow: auto;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-border);
+  background: #ffffff;
+}
+
+.tableWrap .table {
+  margin: 0;
+}
+
+.tableWrap thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tableWrap tbody tr {
+  transition: background-color 100ms ease-out;
+}
+
+@media (hover: hover) {
+  .tableWrap tbody tr:not(.expandedRow):hover {
+    background-color: #f8fafc;
+  }
+}
+
+.tableWrap td.num,
+.tableWrap th.num {
+  text-align: end;
+}
+
+.tableWrap td.cellActions {
+  text-align: end;
+  white-space: nowrap;
+}
+
+.rowToggle {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #475569;
+}
+
+.rowToggle svg {
+  transition: rotate 150ms ease-out;
+}
+
+.rowToggle[aria-expanded="true"] svg {
+  rotate: 90deg;
+}
+
+.tableWrap tr.expandedRow > td {
+  background: #f8fafc;
+  padding: 14px 18px 18px;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-block-start: 12px;
+  color: #475569;
+  font-size: var(--text-caption);
+}
+
+.pagerControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagerButton {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  padding-inline: 8px;
+  background: transparent;
+  color: #334155;
+  font-weight: 700;
+  transition-property: background-color, border-color, color, scale;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.pagerButton:not(:disabled):active {
+  scale: 0.96;
+}
+
+.pagerButton[aria-current="page"] {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.pagerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+@media (hover: hover) {
+  .pagerButton:not(:disabled):not([aria-current="page"]):hover {
+    background: #f1f5f9;
+  }
+}
+
+.pagerSize select {
+  min-height: 34px;
+  margin-inline-start: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-control);
+  padding-inline: 8px;
+  background: #ffffff;
+}
+
+/* Empty / filtered-empty state. */
+.emptyState {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 32px 16px;
+  text-align: center;
+}
+
+.emptyState strong {
+  color: var(--ink);
+  font-size: var(--text-heading);
+}
+
+.emptyState p {
+  max-width: 52ch;
+  margin: 0;
+  color: #475569;
+}
+
+/* Loading skeleton rows. */
+.skeletonCell {
+  display: block;
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skeletonCell {
+    animation: shimmer 1.2s ease-in-out infinite;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+/* ---------- Page header ---------- */
+.pageHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-block-end: 18px;
+}
+
+.pageHeader h1 {
+  margin: 0;
+}
+
+.pageHeader p {
+  max-width: 70ch;
+  margin: 6px 0 0;
+  color: #475569;
+}
+
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ---------- Overlays ---------- */
+.modalBackdrop,
+.confirmModal,
+.rulesModal,
+.approvalModal,
+.userDropdown {
+  overscroll-behavior: contain;
+}
+
+.confirmModal {
+  max-height: 100dvh;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .modalBackdrop {
+    animation: enterFade 150ms ease-out backwards;
+  }
+
+  .confirmModal {
+    animation: enterUp 220ms var(--ease-out) backwards;
+  }
+}
+
+/* ---------- Forced colors: keep component edges visible ---------- */
+@media (forced-colors: active) {
+  .panel,
+  .tableWrap,
+  .primaryButton,
+  .approveButton,
+  .dangerButton,
+  .iconButton {
+    border: 1px solid CanvasText;
+  }
+}
+
+/* Small tables (attempt history). */
+.miniTable td,
+.miniTable th {
+  padding-block: 8px;
+}
+
+.miniTable tr.activeRow {
+  background: #eff6ff;
+  box-shadow: inset 3px 0 0 #1d4ed8;
+}
+
+.historyList .miniTable {
+  font-size: var(--text-caption);
+}
+
+.historyList .miniTable td,
+.historyList .miniTable th {
+  padding-inline: 8px;
+}
+
+/* Long text in a table cell: two lines, the full text is in the expanded row. */
+.lineClamp2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-width: 48ch;
+}
+
+/* Status badges that sit in a row of .reviewChip: same height, border and type size as the chips. */
+.reviewChips {
+  align-items: center;
+}
+
+.badge.statusPill {
+  min-height: 32px;
+  padding: 0 14px;
+  gap: 6px;
+  border: 1px solid transparent;
+  font-size: 13px;
+}
+
+/* Drag and drop of table rows (exam question order). */
+.dragCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dragHandle {
+  display: inline-flex;
+  padding: 4px 2px;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: grab;
+  touch-action: none;
+  transition-property: color, background-color;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .dragHandle:hover {
+    background: #eef2f7;
+    color: var(--ink);
+  }
+}
+
+.tableWrap tbody tr.dragging {
+  opacity: 0.45;
+}
+
+.tableWrap tbody tr.dropTarget > td {
+  box-shadow: inset 0 2px 0 #1d4ed8;
+}
+
+/* Date and time typed as dd/MM/yyyy HH:mm (DateTimeField). */
+.dateTimeField {
+  display: grid;
+  gap: 8px;
+  flex: 1 1 240px;
+  min-width: 220px;
+  max-width: 320px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dateTimeControl {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dateTimeControl > input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-soft);
+}
+
+.dateTimeControl > input[aria-invalid="true"] {
+  border-color: #dc2626;
+}
+
+/* The native picker is only a calendar popup: invisible, laid over the button. */
+.dateTimeNative {
+  position: absolute;
+  inset-inline-end: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dateTimeError {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* Settings selects need room for their whole label ("Điểm cao nhất", "Điểm trung bình"...). */
+.field.settingNarrow {
+  flex: 0 0 150px;
+  width: 150px;
+}
+
+.field.settingWide {
+  flex: 1 1 240px;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+/* Every cell of a row lines up on the same middle line, however many lines its neighbours need. */
+.tableWrap tbody td {
+  vertical-align: middle;
+}
+
+.badgeRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.cellSub {
+  color: #64748b;
+  font-size: var(--text-caption);
+  white-space: nowrap;
+}
+
+/* Sortable column headers. */
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 0;
+  padding: 2px 4px;
+  margin-inline: -4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  box-shadow: none;
+  transition-property: background-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+}
+
+.sortButton svg {
+  opacity: 0.45;
+  flex: none;
+}
+
+.sortButton.active {
+  color: #1d4ed8;
+}
+
+.sortButton.active svg {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sortButton:hover {
+    background: #e8eef7;
+    color: var(--ink);
+    transform: none;
+  }
+}
+
+.sortButton:active {
+  scale: 0.97;
+}
+
+.tableWrap th.num .sortButton {
+  flex-direction: row-reverse;
+}
+
+/* Grouped form (user profile). */
+.formSection {
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+}
+
+.formSection legend {
+  margin-bottom: 10px;
+  padding: 0;
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 800;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.formGrid .formWide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 640px) {
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Notification bell. */
+.topbarRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bellWrap {
+  position: relative;
+}
+
+.bellButton {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  transition-property: background-color, border-color, scale;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bellButton:hover {
+    background: #f1f5f9;
+  }
+}
+
+.bellButton:active {
+  scale: 0.96;
+}
+
+.bellBadge {
+  position: absolute;
+  inset-block-start: -6px;
+  inset-inline-end: -6px;
+  min-width: 20px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  line-height: 1.4;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px #ffffff;
+}
+
+.bellPanel {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: 40;
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(520px, 75vh);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+  transform-origin: top right;
+  animation: bellIn 160ms var(--ease-out) backwards;
+}
+
+@keyframes bellIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bellPanel {
+    animation: none;
+  }
+}
+
+.bellPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.bellList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.bellItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color 120ms var(--ease-out);
+}
+
+.bellItem.unread {
+  background: #f5f9ff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bellItem:hover {
+    background: #eef4ff;
+    transform: none;
+  }
+}
+
+.bellItemIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #e0e9ff;
+  color: #1d4ed8;
+}
+
+.bellItemText {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.bellItemText strong {
+  font-size: 0.875rem;
+}
+
+.bellItemText span {
+  color: #475569;
+  font-size: 0.8125rem;
+  text-wrap: pretty;
+}
+
+.bellItemText time {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.bellDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-block-start: 6px;
+  border-radius: 999px;
+  background: #2563eb;
+}
+
+.bellEmpty {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 32px 20px;
+  color: #64748b;
+  font-size: 0.8125rem;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.bellEmpty strong {
+  color: var(--ink);
+}
+
+/* Mail template editor: form on the left, live preview on the right. */
+.mailEditor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-block-start: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .mailEditor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.mailPreview {
+  position: sticky;
+  inset-block-start: 76px;
+}
+
+@media (max-width: 1100px) {
+  .mailPreview {
+    position: static;
+  }
+}
+
+.mailSubject {
+  margin: 0 0 10px;
+  font-size: 0.875rem;
+}
+
+.mailSubject span {
+  color: #64748b;
+}
+
+.mailFrame {
+  width: 100%;
+  height: 560px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f1f5f9;
+}
+
+.placeholderChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.codeArea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  tab-size: 2;
+}
+
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colorRow input[type="color"] {
+  width: 44px;
+  min-height: 38px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+/* Language dropdown (flag + code). */
+.langWrap {
+  position: relative;
+  display: inline-block;
+}
+
+.langButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 0;
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: none;
+  transition-property: background-color, scale;
+  transition-duration: 150ms;
+  transition-timing-function: var(--ease-out);
+}
+
+.langButton:active {
+  scale: 0.97;
+}
+
+.langChevron {
+  color: #64748b;
+  transition: rotate 150ms var(--ease-out);
+}
+
+.langButton[aria-expanded="true"] .langChevron {
+  rotate: 180deg;
+}
+
+.langFlag {
+  flex: none;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.14);
+}
+
+.langMenu {
+  position: absolute;
+  inset-block-start: calc(100% + 6px);
+  inset-inline-end: 0;
+  z-index: 40;
+  min-width: 100%;
+  width: max-content;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16);
+  transform-origin: top right;
+  animation: bellIn 160ms var(--ease-out) backwards;
+}
+
+.langOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #1e293b;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background-color 150ms var(--ease-out);
+}
+
+.langOption.active {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.langCheck {
+  margin-inline-start: auto;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .langButton:hover,
+  .langOption:not(.active):hover {
+    background: #f1f5f9;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .langMenu {
+    animation: none;
+  }
+}
+
+.authLang {
+  position: absolute;
+  inset-block-start: 16px;
+  inset-inline-end: 16px;
+}

@@ -11,12 +11,24 @@ class ListUsersAction
 {
     public function execute(ListUsersDto $dto): LengthAwarePaginator
     {
-        $query = User::query();
+        $query = User::query()->with('department');
 
         $this->applySearch($query, $dto->search);
 
         if ($dto->role !== null && $dto->role !== '') {
             $query->where('role', $dto->role);
+        }
+
+        if (filled($dto->department_id)) {
+            $query->where('department_id', $dto->department_id);
+        }
+
+        if (filled($dto->class_code)) {
+            $query->where('class_code', $dto->class_code);
+        }
+
+        if (filled($dto->major)) {
+            $query->where('major', $dto->major);
         }
 
         return $query
@@ -33,7 +45,9 @@ class ListUsersAction
 
         $query->where(function (Builder $query) use ($keyword) {
             $query->where('name', 'ILIKE', "%{$keyword}%")
-                ->orWhere('email', 'ILIKE', "%{$keyword}%");
+                ->orWhere('email', 'ILIKE', "%{$keyword}%")
+                ->orWhere('user_code', 'ILIKE', "%{$keyword}%")
+                ->orWhere('class_code', 'ILIKE', "%{$keyword}%");
         });
     }
 }

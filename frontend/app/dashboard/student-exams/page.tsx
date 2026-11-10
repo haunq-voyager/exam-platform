@@ -1,197 +1,203 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { CalendarClock, CheckCircle2, Clock3, FileText, Filter, Hourglass, PlayCircle, Search } from "lucide-react";
+
+import { formatDateTime } from "../../../lib/format-date";
+import { tr } from "../../../lib/i18n";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "@/components/RoleLink";
+import { useRouter } from "@/lib/use-role-router";
+import { PlayCircle, RotateCcw } from "lucide-react";
 import { api, ApiError } from "../../../lib/api-client";
-import { ATTEMPT_STATUS_LABEL, EXAM_STATUS_LABEL, statusLabel } from "../../../lib/status-labels";
-import type { ExamStatus, StudentExam } from "../../../lib/types";
+import { DataTable } from "../../../components/DataTable";
+import { ExamRulesModal } from "../../../components/ExamRulesModal";
+import { PageHeader } from "../../../components/PageHeader";
+import { FilterSelect, TableToolbar } from "../../../components/TableToolbar";
+import { markRulesAcknowledged } from "../../../lib/exam-rules";
+import { ATTEMPT_STATUS_LABEL, EXAM_STATUS_LABEL, SCORING_METHOD_LABEL, statusLabel } from "../../../lib/status-labels";
+import { useClientTable } from "../../../lib/use-client-table";
+import type { StudentExam } from "../../../lib/types";
 
 const STATUS_BADGE: Record<string, string> = { draft: "blue", scheduled: "amber", open: "green", closed: "red" };
-const STATUS_LABEL: Record<string, string> = {
-  all: "Tất cả",
-  scheduled: "Sắp diễn ra",
-  open: "Đang mở",
-  closed: "Đã đóng",
-  graded: "Đã thi"
-};
+
+const STATUS_FILTERS = [
+  { value: "open", get label() { return tr("Đang mở"); } },
+  { value: "scheduled", get label() { return tr("Sắp diễn ra"); } },
+  { value: "closed", get label() { return tr("Đã kết thúc"); } },
+  { value: "done", get label() { return tr("Đã có điểm"); } }
+];
 
 function formatDate(value: string | null): string {
-  if (!value) return "Chưa đặt lịch";
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  if (!value) return tr("Chưa đặt lịch");
+  return formatDateTime(value);
 }
 
-function formatCountdown(value: string | null): string {
-  if (!value) return "Đang cập nhật";
-  const diff = new Date(value).getTime() - Date.now();
-  if (diff <= 0) return "Đã đến giờ";
-  const days = Math.floor(diff / 86_400_000);
-  const hours = Math.floor((diff % 86_400_000) / 3_600_000);
-  const minutes = Math.floor((diff % 3_600_000) / 60_000);
-  if (days > 0) return `${days} ngày ${hours} giờ`;
-  return `${hours} giờ ${minutes} phút`;
-}
-
-function statusOf(exam: StudentExam): ExamStatus | "graded" {
-  return exam.my_attempt_status === "graded" ? "graded" : exam.status;
-}
+const SORTERS = {
+  title: (row: StudentExam) => row.title,
+  status: (row: StudentExam) => row.status,
+  time: (row: StudentExam) => row.start_at,
+  attempts: (row: StudentExam) => row.my_attempt_count,
+  score: (row: StudentExam) => row.my_score
+};
 
 export default function StudentExamsPage() {
+  const router = useRouter();
   const [exams, setExams] = useState<StudentExam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [query, setQuery] = useState("");
-  const router = useRouter();
-
-  async function load() {
-    setLoading(true);
-    try {
-      const response = await api.get<{ data: StudentExam[] }>("/student/exams");
-      setExams(response.data);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [statusFilter, setStatusFilter] = useState("");
+  const [pendingExam, setPendingExam] = useState<StudentExam | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
-    load();
+    api
+      .get<{ data: StudentExam[] }>("/student/exams")
+      .then((response) => setExams(response.data))
+      .finally(() => setLoading(false));
   }, []);
 
-  const filteredExams = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return exams.filter((exam) => {
-      const matchesStatus = statusFilter === "all" || statusOf(exam) === statusFilter;
-      const matchesQuery = !normalized || exam.title.toLowerCase().includes(normalized) || (exam.description ?? "").toLowerCase().includes(normalized);
-      return matchesStatus && matchesQuery;
-    });
-  }, [exams, query, statusFilter]);
+  const byStatus = useMemo(
+    () => exams.filter((exam) => !statusFilter || (statusFilter === "done" ? exam.my_score !== null : exam.status === statusFilter)),
+    [exams, statusFilter]
+  );
+  const matches = useCallback((exam: StudentExam, query: string) => `${exam.title} ${exam.exam_title ?? ""} ${exam.description ?? ""}`.toLowerCase().includes(query), []);
+  const table = useClientTable(byStatus, { matches, initialPageSize: 10, sorters: SORTERS });
+  const hasFilters = Boolean(table.query.trim() || statusFilter);
 
-  async function handleStart(exam: StudentExam) {
+  async function handleConfirmStart() {
+    const exam = pendingExam;
+    if (!exam) return;
     setError(null);
+    setIsStarting(true);
     try {
-      if (exam.my_attempt_id && exam.my_attempt_status === "in_progress") {
-        router.push(`/exam/${exam.my_attempt_id}`);
-        return;
+      let attemptId = exam.my_attempt_id;
+      if (!attemptId || exam.my_attempt_status !== "in_progress") {
+        const response = await api.post<{ data: { id: number } }>(`/exam-sessions/${exam.id}/attempts`);
+        attemptId = response.data.id;
       }
-      const response = await api.post<{ data: { id: number } }>(`/exam-sessions/${exam.id}/attempts`);
-      router.push(`/exam/${response.data.id}`);
+      markRulesAcknowledged(attemptId);
+      router.push(`/exam/${attemptId}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Không thể bắt đầu làm bài.");
+      setError(err instanceof ApiError ? err.message : tr("Không thể bắt đầu làm bài."));
+      setPendingExam(null);
+    } finally {
+      setIsStarting(false);
     }
   }
 
   return (
     <>
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Thí sinh</p>
-          <h1>Kỳ thi của tôi</h1>
-        </div>
-      </header>
+      <PageHeader title={tr("Đề thi của tôi")} description={tr("Các kỳ thi bạn được giao. Vào phòng thi khi kỳ thi đang mở, hoặc xem lại điểm và lịch sử các lần thi.")} />
 
-      {error ? <div className="formError" style={{ marginBottom: 14 }}>{error}</div> : null}
+      {error ? <div className="formError" role="alert" style={{ marginBottom: 14 }}>{error}</div> : null}
 
-      <section className="clientHero examHeroBanner">
-        <div>
-          <p className="eyebrow">ExamHub workspace</p>
-          <h2>Theo dõi lịch thi, điểm số và tiến trình trong một màn hình</h2>
-          <p>Mỗi kỳ thi có thể xem chi tiết trước khi vào phòng thi, tiếp tục bài đang làm và nhận biết trạng thái bằng màu sắc rõ ràng.</p>
-        </div>
-        <div className="clientHeroArt" aria-hidden="true">
-          <FileText size={30} />
-          <div>
-            <span>Kỳ thi được giao</span>
-            <strong>{exams.length}</strong>
-          </div>
-        </div>
+      <section className="panel">
+        <TableToolbar
+          search={{ value: table.query, onChange: table.setQuery, placeholder: tr("Tìm theo tên kỳ thi…"), label: tr("Tìm kỳ thi") }}
+          active={hasFilters}
+          onReset={() => {
+            table.reset();
+            setStatusFilter("");
+          }}
+        >
+          <FilterSelect label={tr("Trạng thái")} value={statusFilter} onChange={setStatusFilter} options={STATUS_FILTERS} />
+        </TableToolbar>
+
+        <DataTable
+          label={tr("Danh sách kỳ thi của tôi")}
+          rows={table.visible}
+          rowKey={(row) => row.id}
+          loading={loading}
+          filtered={hasFilters}
+          searchTerm={table.query.trim()}
+          onClearFilters={() => {
+            table.reset();
+            setStatusFilter("");
+          }}
+          emptyMessage={tr("Bạn chưa được giao kỳ thi nào")}
+          emptyHint={tr("Khi giáo vụ gán bạn vào một kỳ thi, kỳ thi sẽ xuất hiện ở đây.")}
+          pagination={table.pagination}
+          sort={table.sort}
+          columns={[
+            {
+              key: "title",
+              sortKey: "title",
+              header: tr("Kỳ thi"),
+              render: (row) => (
+                <div>
+                  <Link href={`/dashboard/student-exams/${row.id}`}>
+                    <strong>{row.title}</strong>
+                  </Link>
+                  <div className="reviewEmpty" style={{ margin: 0 }}>
+                    {row.duration_minutes} {tr("phút ·")} {row.question_count} {tr("câu")}
+                  </div>
+                  {row.my_flagged ? <span className="badge red">{tr("Bị đánh dấu gian lận")}</span> : null}
+                </div>
+              )
+            },
+            {
+              key: "status",
+              sortKey: "status",
+              header: tr("Trạng thái"),
+              render: (row) => (
+                <div>
+                  <span className={`badge ${STATUS_BADGE[row.status] ?? "blue"}`}>{statusLabel(EXAM_STATUS_LABEL, row.status)}</span>
+                  {row.my_attempt_status ? <div className="reviewEmpty" style={{ margin: "4px 0 0" }}>{statusLabel(ATTEMPT_STATUS_LABEL, row.my_attempt_status)}</div> : null}
+                </div>
+              )
+            },
+            { key: "time", sortKey: "time", header: tr("Thời gian thi"), render: (row) => `${formatDate(row.start_at)} → ${row.end_at ? formatDate(row.end_at) : tr("không giới hạn")}` },
+            { key: "attempts", sortKey: "attempts", header: tr("Số lần thi"), numeric: true, render: (row) => `${row.my_attempt_count}/${row.max_attempts}` },
+            {
+              key: "score",
+              sortKey: "score",
+              header: tr("Điểm"),
+              numeric: true,
+              render: (row) =>
+                row.my_score !== null ? (
+                  <span title={row.max_attempts > 1 ? statusLabel(SCORING_METHOD_LABEL, row.scoring_method) : undefined}>
+                    <strong>{row.my_score}</strong>
+                  </span>
+                ) : (
+                  "—"
+                )
+            },
+            {
+              key: "actions",
+              header: tr("Thao tác"),
+              actions: true,
+              render: (row) => (
+                <div className="controlRow" style={{ margin: 0, justifyContent: "flex-end" }}>
+                  {row.can_attempt ? (
+                    <button className="primaryButton" onClick={() => setPendingExam(row)}>
+                      {row.my_attempt_status === "in_progress" ? <PlayCircle size={16} aria-hidden="true" /> : row.my_attempt_count > 0 ? <RotateCcw size={16} aria-hidden="true" /> : <PlayCircle size={16} aria-hidden="true" />}
+                      {row.my_attempt_status === "in_progress" ? tr("Tiếp tục làm bài") : row.my_attempt_count > 0 ? tr("Thi lại (lần {0})", row.my_attempt_count + 1) : tr("Vào phòng thi")}
+                    </button>
+                  ) : null}
+                  <Link className="approveButton" href={`/dashboard/student-exams/${row.id}`}>
+                    {tr("Chi tiết")}
+                  </Link>
+                </div>
+              )
+            }
+          ]}
+        />
       </section>
 
-      <section className="examFilterBar">
-        <label className="searchField">
-          <Search size={17} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm kỳ thi..." />
-        </label>
-        <div className="segmentGroup" aria-label="Lọc trạng thái">
-          {["all", "scheduled", "open", "closed", "graded"].map((item) => (
-            <button key={item} className={statusFilter === item ? "segment active" : "segment"} onClick={() => setStatusFilter(item)}>
-              {STATUS_LABEL[item]}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="clientPanel">
-        {loading ? (
-          <div className="emptyState">Đang tải...</div>
-        ) : filteredExams.length === 0 ? (
-          <div className="emptyState">Không có kỳ thi phù hợp bộ lọc.</div>
-        ) : (
-          <div className="examCardGrid">
-            {filteredExams.map((exam, index) => {
-              const examStatus = statusOf(exam);
-              const isOpen = exam.status === "open";
-              const isInProgress = exam.my_attempt_status === "in_progress";
-              const bgClass = `examCardBg${(index % 4) + 1}`;
-
-              return (
-                <article className={`studentExamCard ${bgClass}`} key={exam.id}>
-                  <Link className="studentExamLink" href={`/dashboard/student-exams/${exam.id}`} aria-label={`Xem chi tiết ${exam.title}`} />
-                  <div className="studentExamTop">
-                    <span className={`badge ${STATUS_BADGE[exam.status] ?? "blue"}`}>
-                      {examStatus === "graded" ? "Đã chấm" : statusLabel(EXAM_STATUS_LABEL, exam.status)}
-                    </span>
-                    <span className="countdownPill">
-                      <Hourglass size={15} />
-                      {exam.status === "scheduled" ? formatCountdown(exam.start_at) : statusLabel(ATTEMPT_STATUS_LABEL, exam.my_attempt_status)}
-                    </span>
-                  </div>
-                  <div className="studentExamContent">
-                    <h2>{exam.title}</h2>
-                    <p>{exam.description ?? "Kỳ thi trực tuyến có giám sát và tự động lưu bài làm."}</p>
-                  </div>
-                  <div className="studentExamMeta">
-                    <span>
-                      <Clock3 size={15} />
-                      {exam.duration_minutes} phút
-                    </span>
-                    <span>
-                      <FileText size={15} />
-                      {exam.question_count} câu
-                    </span>
-                    <span>
-                      <CalendarClock size={15} />
-                      {formatDate(exam.start_at)}
-                    </span>
-                  </div>
-                  <div className="studentExamActions">
-                    {exam.my_attempt_status === "graded" ? (
-                      <span className="scorePill">
-                        <CheckCircle2 size={16} />
-                        Điểm: {exam.my_score}
-                      </span>
-                    ) : isOpen ? (
-                      <button className="primaryButton" onClick={() => handleStart(exam)}>
-                        <PlayCircle size={17} />
-                        {isInProgress ? "Tiếp tục làm bài" : "Vào phòng thi"}
-                      </button>
-                    ) : (
-                      <span className="badge amber">
-                        <Filter size={14} />
-                        Chờ đến giờ thi
-                      </span>
-                    )}
-                    <Link className="approveButton" href={`/dashboard/student-exams/${exam.id}`}>
-                      Xem chi tiết
-                    </Link>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
+      {pendingExam ? (
+        <ExamRulesModal
+          title={pendingExam.title}
+          durationMinutes={pendingExam.duration_minutes}
+          questionCount={pendingExam.question_count}
+          maxAttempts={pendingExam.max_attempts}
+          scoringMethod={pendingExam.scoring_method}
+          proctoringEnabled={pendingExam.proctoring_enabled}
+          maxViolations={pendingExam.max_violations}
+          confirmLabel={pendingExam.my_attempt_status === "in_progress" ? tr("Tôi đồng ý, tiếp tục làm bài") : tr("Tôi đồng ý, bắt đầu làm bài")}
+          loading={isStarting}
+          onConfirm={handleConfirmStart}
+          onCancel={() => setPendingExam(null)}
+        />
+      ) : null}
     </>
   );
 }

@@ -8,5 +8,7 @@ enum ProctoringEventType: string
     case MultipleFaces = 'multiple_faces';
     case FaceOutOfFrame = 'face_out_of_frame';
     case TabSwitch = 'tab_switch';
+    case WindowBlur = 'window_blur';
+    case LookingAway = 'looking_away';
     case Inactive = 'inactive';
 }

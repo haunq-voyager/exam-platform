@@ -22,6 +22,10 @@ class ListQuestionsAction
             $query->where('topic_id', $dto->topic_id);
         }
 
+        if ($dto->subject_id !== null) {
+            $query->whereHas('topic', fn (Builder $topics) => $topics->where('subject_id', $dto->subject_id));
+        }
+
         return $query
             ->orderBy($dto->sort_by, $dto->sort_order)
             ->paginate(perPage: $dto->per_page, page: $dto->page);

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Actions\Attempts\GetAttemptStatsAction;
+use App\Actions\Attempts\GetExamSessionResultsAction;
 use App\Actions\Attempts\ListExamAttemptsForSessionAction;
 use App\Actions\Attempts\ListMyExamAttemptsAction;
 use App\Actions\Attempts\SaveExamAttemptAnswerAction;
@@ -28,6 +29,7 @@ class ExamAttemptController extends BaseController
         private ListMyExamAttemptsAction $listMyExamAttemptsAction,
         private ListExamAttemptsForSessionAction $listExamAttemptsForSessionAction,
         private GetAttemptStatsAction $getAttemptStatsAction,
+        private GetExamSessionResultsAction $getExamSessionResultsAction,
     ) {}
 
     public function store(ExamSession $examSession, Request $request): JsonResponse
@@ -53,6 +55,11 @@ class ExamAttemptController extends BaseController
         $attempts = $this->listExamAttemptsForSessionAction->execute($examSession);
 
         return $this->respondSuccess(data: ExamAttemptResource::collection($attempts)->resolve(), message: 'Exam attempts retrieved successfully.');
+    }
+
+    public function resultsForSession(ExamSession $examSession): JsonResponse
+    {
+        return $this->respondSuccess(data: $this->getExamSessionResultsAction->execute($examSession), message: 'Exam session results retrieved successfully.');
     }
 
     public function show(ExamAttempt $examAttempt, Request $request): JsonResponse

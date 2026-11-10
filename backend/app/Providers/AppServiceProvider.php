@@ -6,6 +6,8 @@ use App\Contracts\AiQuestionGeneratorContract;
 use App\Services\Ai\ClaudeAiQuestionGeneratorAdapter;
 use App\Services\Ai\GeminiAiQuestionGeneratorAdapter;
 use App\Services\Ai\MockAiQuestionGeneratorAdapter;
+use App\Services\Approvals\ApprovalService;
+use App\Services\Auth\PermissionService;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -15,6 +17,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // One instance per request so the role/level tables are read once and reused.
+        $this->app->scoped(PermissionService::class);
+        $this->app->scoped(ApprovalService::class);
+
         // Real provider when an API key is configured (Claude preferred, then
         // Gemini), mock fallback otherwise — keeps local/demo environments
         // working without any API key.

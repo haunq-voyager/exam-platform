@@ -15,6 +15,10 @@ class ExamSessionAssignmentResource extends JsonResource
             'student_id' => $this->student_id,
             'student_name' => $this->whenLoaded('student', fn () => $this->student?->name),
             'student_email' => $this->whenLoaded('student', fn () => $this->student?->email),
+            'student_major' => $this->whenLoaded('student', fn () => $this->student?->major),
+            'student_code' => $this->whenLoaded('student', fn () => $this->student?->user_code),
+            'student_class' => $this->whenLoaded('student', fn () => $this->student?->class_code),
+            'student_year' => $this->whenLoaded('student', fn () => $this->student?->academic_year),
         ];
     }
 }

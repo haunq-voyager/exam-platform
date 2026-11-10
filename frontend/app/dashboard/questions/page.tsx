@@ -1,11 +1,16 @@
 "use client";
 
+
+import { tr } from "../../../lib/i18n";
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Check, Eye, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import Link from "@/components/RoleLink";
+import { useRouter } from "@/lib/use-role-router";
+import { Check, Eye, Pencil, Plus, Trash2, X } from "lucide-react";
+import { useServerSort } from "../../../lib/use-server-sort";
 import { api } from "../../../lib/api-client";
 import { DataTable } from "../../../components/DataTable";
+import { PageHeader } from "../../../components/PageHeader";
+import { FilterSelect, TableToolbar } from "../../../components/TableToolbar";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { QuestionPreviewModal } from "../../../components/QuestionPreviewModal";
 import { metaOf, type PaginatedResponse } from "../../../lib/pagination";
@@ -13,7 +18,7 @@ import { useToast } from "../../../lib/toast";
 import { REVIEW_STATUS_LABEL, statusLabel } from "../../../lib/status-labels";
 import type { Difficulty, Question } from "../../../lib/types";
 
-const DIFFICULTY_LABEL: Record<Difficulty, string> = { easy: "Dễ", medium: "Trung bình", hard: "Khó" };
+const DIFFICULTY_LABEL: Record<Difficulty, string> = { get easy() { return tr("Dễ"); }, get medium() { return tr("Trung bình"); }, get hard() { return tr("Khó"); } };
 const STATUS_BADGE: Record<string, string> = { approved: "green", pending: "amber", rejected: "red", draft: "blue" };
 
 type ConfirmAction = { type: "approve" | "reject" | "delete"; question: Question } | null;
@@ -33,20 +38,29 @@ export default function QuestionsPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [previewQuestion, setPreviewQuestion] = useState<Question | null>(null);
 
+  const serverSort = useServerSort(() => setPage(1));
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<PaginatedResponse<Question>>("/questions", { status: statusFilter, search, page, per_page: 15 });
+      const response = await api.get<PaginatedResponse<Question>>("/questions", { status: statusFilter, search, page, per_page: 15, ...serverSort.params });
       setQuestions(response.data);
       setMeta(metaOf(response));
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, page]);
+  }, [statusFilter, search, page, serverSort.params]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const hasFilters = Boolean(search.trim() || statusFilter);
+  const clearFilters = () => {
+    setPage(1);
+    setSearch("");
+    setStatusFilter("");
+  };
 
   async function runConfirmedAction() {
     if (!confirmAction) return;
@@ -54,18 +68,18 @@ export default function QuestionsPage() {
     try {
       if (confirmAction.type === "approve") {
         await api.post(`/questions/${confirmAction.question.id}/approve`);
-        showToast("Đã duyệt câu hỏi.");
+        showToast(tr("Đã duyệt câu hỏi."));
       } else if (confirmAction.type === "reject") {
         await api.post(`/questions/${confirmAction.question.id}/reject`);
-        showToast("Đã từ chối câu hỏi.");
+        showToast(tr("Đã từ chối câu hỏi."));
       } else {
         await api.delete(`/questions/${confirmAction.question.id}`);
-        showToast("Đã xoá câu hỏi.");
+        showToast(tr("Đã xoá câu hỏi."));
       }
       setConfirmAction(null);
       await load();
     } catch {
-      showToast("Không thể thực hiện thao tác.", "error");
+      showToast(tr("Không thể thực hiện thao tác."), "error");
     } finally {
       setIsProcessing(false);
     }
@@ -75,74 +89,78 @@ export default function QuestionsPage() {
     setIsProcessing(true);
     try {
       await Promise.all(Array.from(selectedIds).map((id) => api.delete(`/questions/${id}`)));
-      showToast(`Đã xoá ${selectedIds.size} câu hỏi.`);
+      showToast(tr("Đã xoá {0} câu hỏi.", selectedIds.size));
       setSelectedIds(new Set());
       setBulkDeleteOpen(false);
       await load();
     } catch {
-      showToast("Không thể xoá một số câu hỏi.", "error");
+      showToast(tr("Không thể xoá một số câu hỏi."), "error");
     } finally {
       setIsProcessing(false);
     }
   }
 
   const confirmCopy: Record<NonNullable<ConfirmAction>["type"], { title: string; description: (q: Question) => string; danger?: boolean; label: string }> = {
-    approve: { title: "Duyệt câu hỏi?", description: (q) => `Duyệt câu hỏi "${q.question_text.slice(0, 60)}..." vào ngân hàng câu hỏi?`, label: "Duyệt" },
-    reject: { title: "Từ chối câu hỏi?", description: (q) => `Từ chối câu hỏi "${q.question_text.slice(0, 60)}..."?`, danger: true, label: "Từ chối" },
-    delete: { title: "Xoá câu hỏi?", description: (q) => `Xoá câu hỏi "${q.question_text.slice(0, 60)}..."?`, danger: true, label: "Xoá" }
+    approve: { title: tr("Duyệt câu hỏi?"), description: (q) => tr("Duyệt câu hỏi \"{0}...\" vào ngân hàng câu hỏi?", q.question_text.slice(0, 60)), label: tr("Duyệt") },
+    reject: { title: tr("Từ chối câu hỏi?"), description: (q) => tr("Từ chối câu hỏi \"{0}...\"?", q.question_text.slice(0, 60)), danger: true, label: tr("Từ chối") },
+    delete: { title: tr("Xoá câu hỏi?"), description: (q) => tr("Xoá câu hỏi \"{0}...\"?", q.question_text.slice(0, 60)), danger: true, label: tr("Xoá") }
   };
 
   return (
     <>
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Ngân hàng câu hỏi</p>
-          <h1>Câu hỏi</h1>
-        </div>
-        <button className="primaryButton" onClick={() => router.push("/dashboard/questions/new")}>
-          <Plus size={18} />
-          Thêm câu hỏi
-        </button>
-      </header>
-
-      <div className="toolbar">
-        <div className="controlRow" style={{ margin: 0 }}>
-          <label className="field compact" style={{ width: 160 }}>
-            <span>Trạng thái</span>
-            <select
-              value={statusFilter}
-              onChange={(event) => {
-                setPage(1);
-                setStatusFilter(event.target.value);
-              }}
-            >
-              <option value="">Tất cả</option>
-              <option value="approved">Đã duyệt</option>
-              <option value="pending">Chờ duyệt</option>
-              <option value="rejected">Từ chối</option>
-            </select>
-          </label>
-          <label className="searchField">
-            <Search size={17} />
-            <input
-              value={search}
-              onChange={(event) => {
-                setPage(1);
-                setSearch(event.target.value);
-              }}
-              placeholder="Tìm nội dung câu hỏi..."
-            />
-          </label>
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={tr("Ngân hàng câu hỏi")}
+        title={tr("Câu hỏi")}
+        description={tr("Tạo thủ công hoặc sinh bằng AI, duyệt rồi dùng để soạn đề thi.")}
+        actions={
+          <button className="primaryButton" onClick={() => router.push("/dashboard/questions/new")}>
+            <Plus size={16} aria-hidden="true" />
+            {tr("Thêm câu hỏi")}
+          </button>
+        }
+      />
 
       <section className="panel">
+        <TableToolbar
+          search={{
+            value: search,
+            onChange: (value) => {
+              setPage(1);
+              setSearch(value);
+            },
+            placeholder: tr("Tìm nội dung câu hỏi…"),
+            label: tr("Tìm câu hỏi")
+          }}
+          active={hasFilters}
+          onReset={clearFilters}
+        >
+          <FilterSelect
+            label={tr("Trạng thái")}
+            value={statusFilter}
+            onChange={(value) => {
+              setPage(1);
+              setStatusFilter(value);
+            }}
+            options={[
+              { value: "approved", label: tr("Đã duyệt") },
+              { value: "pending", label: tr("Chờ duyệt") },
+              { value: "rejected", label: tr("Từ chối") }
+            ]}
+          />
+        </TableToolbar>
+
         <DataTable
+          label={tr("Ngân hàng câu hỏi")}
           rows={questions}
           rowKey={(row) => row.id}
           loading={loading}
-          emptyMessage="Chưa có câu hỏi nào."
+          filtered={hasFilters}
+          searchTerm={search.trim()}
+          onClearFilters={clearFilters}
+          emptyMessage={tr("Chưa có câu hỏi nào")}
+          emptyHint={tr("Bấm “Thêm câu hỏi” để tạo thủ công hoặc sinh bằng AI.")}
           pagination={{ page: meta.current_page, perPage: meta.per_page, total: meta.total, onPageChange: setPage }}
+          sort={serverSort.sort}
           selection={{
             selectedIds,
             getId: (row) => row.id,
@@ -157,52 +175,54 @@ export default function QuestionsPage() {
             bulkActions: (
               <button className="dangerButton" onClick={() => setBulkDeleteOpen(true)}>
                 <Trash2 size={16} />
-                Xoá đã chọn
+                {tr("Xoá đã chọn")}
               </button>
             )
           }}
           columns={[
-            { key: "text", header: "Câu hỏi", width: "38%", render: (row) => <strong>{row.question_text.slice(0, 80)}</strong> },
+            { key: "text", sortKey: "question_text", header: tr("Câu hỏi"), width: "38%", render: (row) => <strong>{row.question_text.slice(0, 80)}</strong> },
             {
               key: "meta",
-              header: "Thông tin",
+              header: tr("Thông tin"),
               width: "27%",
               render: (row) => (
                 <span style={{ color: "var(--muted)", fontSize: 13 }}>
-                  {row.topic_name ?? "Không thuộc chủ đề"} · {DIFFICULTY_LABEL[row.difficulty]} · {row.source === "ai" ? "Sinh bởi AI" : "Thủ công"}
+                  {row.topic_name ?? tr("Không thuộc chủ đề")} · {DIFFICULTY_LABEL[row.difficulty]} · {row.source === "ai" ? tr("Sinh bởi AI") : tr("Thủ công")}
                 </span>
               )
             },
             {
               key: "status",
-              header: "Trạng thái",
+              sortKey: "status",
+              header: tr("Trạng thái"),
               width: "13%",
               render: (row) => <span className={`badge ${STATUS_BADGE[row.status]}`}>{statusLabel(REVIEW_STATUS_LABEL, row.status)}</span>
             },
             {
               key: "actions",
-              header: "",
+              header: tr("Thao tác"),
+              actions: true,
               width: "220px",
               render: (row) => (
                 <div className="controlRow" style={{ margin: 0, justifyContent: "flex-end" }}>
                   {row.status === "pending" ? (
                     <>
-                      <button className="iconButton" title="Duyệt" onClick={() => setConfirmAction({ type: "approve", question: row })}>
-                        <Check size={16} />
+                      <button className="iconButton" title={tr("Duyệt")} aria-label={tr("Duyệt câu hỏi")} onClick={() => setConfirmAction({ type: "approve", question: row })}>
+                        <Check size={16} aria-hidden="true" />
                       </button>
-                      <button className="iconButton" title="Từ chối" onClick={() => setConfirmAction({ type: "reject", question: row })}>
-                        <X size={16} />
+                      <button className="iconButton" title={tr("Từ chối")} aria-label={tr("Từ chối câu hỏi")} onClick={() => setConfirmAction({ type: "reject", question: row })}>
+                        <X size={16} aria-hidden="true" />
                       </button>
                     </>
                   ) : null}
-                  <button className="iconButton" title="Xem trước" onClick={() => setPreviewQuestion(row)}>
-                    <Eye size={16} />
+                  <button className="iconButton" title={tr("Xem trước")} aria-label={tr("Xem trước câu hỏi")} onClick={() => setPreviewQuestion(row)}>
+                    <Eye size={16} aria-hidden="true" />
                   </button>
-                  <Link className="iconButton" href={`/dashboard/questions/${row.id}/edit`} title="Sửa">
-                    <Pencil size={16} />
+                  <Link className="iconButton" href={`/dashboard/questions/${row.id}/edit`} title={tr("Sửa")} aria-label={tr("Sửa câu hỏi")}>
+                    <Pencil size={16} aria-hidden="true" />
                   </Link>
-                  <button className="iconButton" title="Xoá" onClick={() => setConfirmAction({ type: "delete", question: row })}>
-                    <Trash2 size={16} />
+                  <button className="iconButton" title={tr("Xoá")} aria-label={tr("Xoá câu hỏi")} onClick={() => setConfirmAction({ type: "delete", question: row })}>
+                    <Trash2 size={16} aria-hidden="true" />
                   </button>
                 </div>
               )
@@ -224,9 +244,9 @@ export default function QuestionsPage() {
 
       <ConfirmDialog
         open={bulkDeleteOpen}
-        title="Xoá các câu hỏi đã chọn?"
-        description={`Xoá ${selectedIds.size} câu hỏi?`}
-        confirmLabel="Xoá"
+        title={tr("Xoá các câu hỏi đã chọn?")}
+        description={tr("Xoá {0} câu hỏi?", selectedIds.size)}
+        confirmLabel={tr("Xoá")}
         danger
         loading={isProcessing}
         onCancel={() => setBulkDeleteOpen(false)}

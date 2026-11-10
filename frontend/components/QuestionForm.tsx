@@ -1,5 +1,7 @@
 "use client";
 
+
+import { tr } from "../lib/i18n";
 import { useState } from "react";
 import { Save, X } from "lucide-react";
 import type { Difficulty, QuestionType, Topic } from "../lib/types";
@@ -63,7 +65,7 @@ export function QuestionForm({ topics, initialValue, submitLabel, submittingLabe
     setForm((prev) => ({
       ...prev,
       question_type: type,
-      options: type === "true_false" ? ["Đúng", "Sai"] : prev.options.length ? prev.options : ["", "", "", ""],
+      options: type === "true_false" ? [tr("Đúng"), "Sai"] : prev.options.length ? prev.options : ["", "", "", ""],
       correct_answer: []
     }));
   }
@@ -73,12 +75,12 @@ export function QuestionForm({ topics, initialValue, submitLabel, submittingLabe
     setLocalError(null);
     const options = form.options.map((option) => option.trim()).filter((option) => option !== "");
     if (options.length < 2) {
-      setLocalError("Cần ít nhất 2 lựa chọn đáp án.");
+      setLocalError(tr("Cần ít nhất 2 lựa chọn đáp án."));
       return;
     }
     const correctAnswer = form.correct_answer.filter((answer) => options.includes(answer));
     if (correctAnswer.length === 0) {
-      setLocalError("Vui lòng chọn đáp án đúng.");
+      setLocalError(tr("Vui lòng chọn đáp án đúng."));
       return;
     }
 
@@ -95,9 +97,9 @@ export function QuestionForm({ topics, initialValue, submitLabel, submittingLabe
       {(error ?? localError) ? <div className="formError" style={{ marginBottom: 12 }}>{error ?? localError}</div> : null}
       <div className="controlRow" style={{ flexWrap: "wrap" }}>
         <label className="field compact" style={{ width: 200 }}>
-          <span>Chủ đề</span>
+          <span>{tr("Chủ đề")}</span>
           <select value={form.topic_id} onChange={(event) => setForm((prev) => ({ ...prev, topic_id: event.target.value }))}>
-            <option value="">Không thuộc chủ đề</option>
+            <option value="">{tr("Không thuộc chủ đề")}</option>
             {topics.map((topic) => (
               <option key={topic.id} value={topic.id}>
                 {topic.name}
@@ -106,25 +108,25 @@ export function QuestionForm({ topics, initialValue, submitLabel, submittingLabe
           </select>
         </label>
         <label className="field compact" style={{ width: 190 }}>
-          <span>Loại câu hỏi</span>
+          <span>{tr("Loại câu hỏi")}</span>
           <select value={form.question_type} onChange={(event) => handleTypeChange(event.target.value as QuestionType)}>
-            <option value="single_choice">Một đáp án đúng</option>
-            <option value="multiple_choice">Nhiều đáp án đúng</option>
-            <option value="true_false">Đúng / Sai</option>
+            <option value="single_choice">{tr("Một đáp án đúng")}</option>
+            <option value="multiple_choice">{tr("Nhiều đáp án đúng")}</option>
+            <option value="true_false">{tr("Đúng / Sai")}</option>
           </select>
         </label>
         <label className="field compact" style={{ width: 150 }}>
-          <span>Độ khó</span>
+          <span>{tr("Độ khó")}</span>
           <select value={form.difficulty} onChange={(event) => setForm((prev) => ({ ...prev, difficulty: event.target.value as Difficulty }))}>
-            <option value="easy">Dễ</option>
-            <option value="medium">Trung bình</option>
-            <option value="hard">Khó</option>
+            <option value="easy">{tr("Dễ")}</option>
+            <option value="medium">{tr("Trung bình")}</option>
+            <option value="hard">{tr("Khó")}</option>
           </select>
         </label>
       </div>
 
       <label className="field" style={{ marginTop: 14 }}>
-        <span>Nội dung câu hỏi</span>
+        <span>{tr("Nội dung câu hỏi")}</span>
         <textarea
           className="textarea"
           value={form.question_text}
@@ -134,7 +136,7 @@ export function QuestionForm({ topics, initialValue, submitLabel, submittingLabe
       </label>
 
       <div className="field" style={{ marginTop: 14 }}>
-        <span>Đáp án (chọn ô tròn/vuông để đánh dấu đáp án đúng)</span>
+        <span>{tr("Đáp án (chọn ô tròn/vuông để đánh dấu đáp án đúng)")}</span>
         <div className="questionList">
           {form.options.map((option, index) => (
             <div key={index} className="questionItem" style={{ gridTemplateColumns: "auto 1fr auto" }}>
@@ -147,7 +149,7 @@ export function QuestionForm({ topics, initialValue, submitLabel, submittingLabe
               />
               <input
                 value={option}
-                placeholder={`Lựa chọn ${index + 1}`}
+                placeholder={tr("Lựa chọn {0}", index + 1)}
                 onChange={(event) => updateOption(index, event.target.value)}
                 disabled={form.question_type === "true_false"}
               />
@@ -172,13 +174,13 @@ export function QuestionForm({ topics, initialValue, submitLabel, submittingLabe
             style={{ marginTop: 8 }}
             onClick={() => setForm((prev) => ({ ...prev, options: [...prev.options, ""] }))}
           >
-            + Thêm lựa chọn
+            {tr("+ Thêm lựa chọn")}
           </button>
         ) : null}
       </div>
 
       <label className="field" style={{ marginTop: 14 }}>
-        <span>Lời giải (không bắt buộc)</span>
+        <span>{tr("Lời giải (không bắt buộc)")}</span>
         <textarea
           className="textarea"
           value={form.explanation}

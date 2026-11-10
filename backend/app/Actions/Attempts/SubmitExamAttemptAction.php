@@ -7,6 +7,7 @@ use App\Exceptions\ApiException;
 use App\Models\ExamAttempt;
 use App\Models\ExamAttemptAnswer;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 class SubmitExamAttemptAction
 {
@@ -16,15 +17,20 @@ class SubmitExamAttemptAction
             throw new ApiException('You do not have access to this attempt.', 'exam_attempt.forbidden', 403);
         }
 
-        return $this->gradeInProgressAttempt($attempt);
+        // A submit that arrives after the deadline is recorded as submitted at the deadline, never later.
+        $attempt->loadMissing('session.exam');
+        $deadline = $attempt->deadline();
+
+        return $this->gradeInProgressAttempt($attempt, now()->greaterThan($deadline) ? $deadline : null);
     }
 
-    public function executeSystem(ExamAttempt $attempt): ExamAttempt
+    /** Grades an attempt on the system's behalf (e.g. its deadline passed); `$submittedAt` records when it really ended. */
+    public function executeSystem(ExamAttempt $attempt, ?Carbon $submittedAt = null): ExamAttempt
     {
-        return $this->gradeInProgressAttempt($attempt);
+        return $this->gradeInProgressAttempt($attempt, $submittedAt);
     }
 
-    private function gradeInProgressAttempt(ExamAttempt $attempt): ExamAttempt
+    private function gradeInProgressAttempt(ExamAttempt $attempt, ?Carbon $submittedAt = null): ExamAttempt
     {
         if ($attempt->status !== ExamAttemptStatus::InProgress) {
             throw new ApiException('This attempt is no longer in progress.', 'exam_attempt.not_in_progress', 422);
@@ -58,7 +64,7 @@ class SubmitExamAttemptAction
 
         $attempt->update([
             'status' => ExamAttemptStatus::Graded,
-            'submitted_at' => now(),
+            'submitted_at' => $submittedAt ?? now(),
             'score' => $totalScore,
             'total_points' => $totalPoints,
         ]);

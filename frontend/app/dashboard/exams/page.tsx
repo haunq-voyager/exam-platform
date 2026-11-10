@@ -1,11 +1,16 @@
 "use client";
 
+
+import { tr } from "../../../lib/i18n";
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { FileQuestion, Plus, Search, Trash2 } from "lucide-react";
+import Link from "@/components/RoleLink";
+import { useRouter } from "@/lib/use-role-router";
+import { FileQuestion, Plus, Trash2 } from "lucide-react";
+import { useServerSort } from "../../../lib/use-server-sort";
 import { api } from "../../../lib/api-client";
 import { DataTable } from "../../../components/DataTable";
+import { PageHeader } from "../../../components/PageHeader";
+import { TableToolbar } from "../../../components/TableToolbar";
 import { ConfirmDialog } from "../../../components/ConfirmDialog";
 import { metaOf, type PaginatedResponse } from "../../../lib/pagination";
 import { useToast } from "../../../lib/toast";
@@ -24,16 +29,18 @@ export default function ExamsPage() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const serverSort = useServerSort(() => setPage(1));
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get<PaginatedResponse<Exam>>("/exams", { search, page, per_page: 15 });
+      const response = await api.get<PaginatedResponse<Exam>>("/exams", { search, page, per_page: 15, ...serverSort.params });
       setExams(response.data);
       setMeta(metaOf(response));
     } finally {
       setLoading(false);
     }
-  }, [search, page]);
+  }, [search, page, serverSort.params]);
 
   useEffect(() => {
     load();
@@ -43,11 +50,11 @@ export default function ExamsPage() {
     setIsDeleting(true);
     try {
       await api.delete(`/exams/${exam.id}`);
-      showToast(`Đã xoá đề thi "${exam.title}".`);
+      showToast(tr("Đã xoá đề thi \"{0}\".", exam.title));
       setDeleteTarget(null);
       await load();
     } catch {
-      showToast("Không thể xoá đề thi (có thể đang được dùng trong một kỳ thi).", "error");
+      showToast(tr("Không thể xoá đề thi (có thể đang được dùng trong một kỳ thi)."), "error");
     } finally {
       setIsDeleting(false);
     }
@@ -57,12 +64,12 @@ export default function ExamsPage() {
     setIsDeleting(true);
     try {
       await Promise.all(Array.from(selectedIds).map((id) => api.delete(`/exams/${id}`)));
-      showToast(`Đã xoá ${selectedIds.size} đề thi.`);
+      showToast(tr("Đã xoá {0} đề thi.", selectedIds.size));
       setSelectedIds(new Set());
       setBulkDeleteOpen(false);
       await load();
     } catch {
-      showToast("Không thể xoá một số đề thi.", "error");
+      showToast(tr("Không thể xoá một số đề thi."), "error");
     } finally {
       setIsDeleting(false);
     }
@@ -70,46 +77,56 @@ export default function ExamsPage() {
 
   return (
     <>
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Ngân hàng đề thi</p>
-          <h1>Danh sách đề thi</h1>
-        </div>
-        <button className="primaryButton" onClick={() => router.push("/dashboard/exams/new")}>
-          <Plus size={18} />
-          Tạo đề thi
-        </button>
-      </header>
-
-      <p style={{ color: "var(--muted)", marginTop: -8, marginBottom: 18 }}>
-        Đề thi là bộ câu hỏi + thời lượng dùng làm mẫu. Để mở cho thí sinh làm bài theo lịch cụ thể, tạo{" "}
-        <Link className="linkButton" href="/dashboard/exam-sessions">
-          kỳ thi
-        </Link>{" "}
-        từ đề thi này.
-      </p>
-
-      <div className="toolbar">
-        <label className="searchField">
-          <Search size={17} />
-          <input
-            value={search}
-            onChange={(event) => {
-              setPage(1);
-              setSearch(event.target.value);
-            }}
-            placeholder="Tìm đề thi..."
-          />
-        </label>
-      </div>
+      <PageHeader
+        eyebrow={tr("Ngân hàng đề thi")}
+        title={tr("Danh sách đề thi")}
+        description={tr("Đề thi là bộ câu hỏi và thời lượng dùng làm mẫu. Muốn mở cho thí sinh làm bài theo lịch, hãy tạo kỳ thi từ đề này.")}
+        actions={
+          <>
+            <Link className="approveButton" href="/dashboard/exam-sessions">
+              {tr("Đến danh sách kỳ thi")}
+            </Link>
+            <button className="primaryButton" onClick={() => router.push("/dashboard/exams/new")}>
+              <Plus size={16} aria-hidden="true" />
+              {tr("Tạo đề thi")}
+            </button>
+          </>
+        }
+      />
 
       <section className="panel">
+        <TableToolbar
+          search={{
+            value: search,
+            onChange: (value) => {
+              setPage(1);
+              setSearch(value);
+            },
+            placeholder: tr("Tìm đề thi…"),
+            label: tr("Tìm đề thi")
+          }}
+          active={Boolean(search.trim())}
+          onReset={() => {
+            setPage(1);
+            setSearch("");
+          }}
+        />
+
         <DataTable
+          label={tr("Danh sách đề thi")}
           rows={exams}
           rowKey={(row) => row.id}
           loading={loading}
-          emptyMessage="Chưa có đề thi nào."
+          filtered={Boolean(search.trim())}
+          searchTerm={search.trim()}
+          onClearFilters={() => {
+            setPage(1);
+            setSearch("");
+          }}
+          emptyMessage={tr("Chưa có đề thi nào")}
+          emptyHint={tr("Bấm “Tạo đề thi” để soạn đề đầu tiên.")}
           pagination={{ page: meta.current_page, perPage: meta.per_page, total: meta.total, onPageChange: setPage }}
+          sort={serverSort.sort}
           selection={{
             selectedIds,
             getId: (row) => row.id,
@@ -124,24 +141,25 @@ export default function ExamsPage() {
             bulkActions: (
               <button className="dangerButton" onClick={() => setBulkDeleteOpen(true)}>
                 <Trash2 size={16} />
-                Xoá đã chọn
+                {tr("Xoá đã chọn")}
               </button>
             )
           }}
           columns={[
-            { key: "title", header: "Tên đề thi", render: (row) => <strong>{row.title}</strong> },
-            { key: "duration", header: "Thời gian", render: (row) => `${row.duration_minutes} phút` },
-            { key: "question_count", header: "Số câu", render: (row) => row.question_count ?? 0 },
+            { key: "title", sortKey: "title", header: tr("Tên đề thi"), render: (row) => <strong>{row.title}</strong> },
+            { key: "duration", sortKey: "duration_minutes", header: tr("Thời gian"), numeric: true, render: (row) => tr("{0} phút", row.duration_minutes) },
+            { key: "question_count", header: tr("Số câu"), numeric: true, render: (row) => row.question_count ?? 0 },
             {
               key: "actions",
-              header: "",
+              header: tr("Thao tác"),
+              actions: true,
               render: (row) => (
                 <div className="controlRow" style={{ margin: 0, justifyContent: "flex-end" }}>
-                  <Link className="iconButton" href={`/dashboard/exams/${row.id}`} title="Quản lý câu hỏi">
-                    <FileQuestion size={16} />
+                  <Link className="iconButton" href={`/dashboard/exams/${row.id}`} title={tr("Quản lý câu hỏi")} aria-label={tr("Quản lý câu hỏi của {0}", row.title)}>
+                    <FileQuestion size={16} aria-hidden="true" />
                   </Link>
-                  <button className="iconButton" title="Xoá" onClick={() => setDeleteTarget(row)}>
-                    <Trash2 size={16} />
+                  <button className="iconButton" title={tr("Xoá")} aria-label={tr("Xoá {0}", row.title)} onClick={() => setDeleteTarget(row)}>
+                    <Trash2 size={16} aria-hidden="true" />
                   </button>
                 </div>
               )
@@ -152,9 +170,9 @@ export default function ExamsPage() {
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        title="Xoá đề thi?"
-        description={deleteTarget ? `Xoá "${deleteTarget.title}"? Không thể hoàn tác.` : undefined}
-        confirmLabel="Xoá"
+        title={tr("Xoá đề thi?")}
+        description={deleteTarget ? tr("Xoá \"{0}\"? Không thể hoàn tác.", deleteTarget.title) : undefined}
+        confirmLabel={tr("Xoá")}
         danger
         loading={isDeleting}
         onCancel={() => setDeleteTarget(null)}
@@ -163,9 +181,9 @@ export default function ExamsPage() {
 
       <ConfirmDialog
         open={bulkDeleteOpen}
-        title="Xoá các đề thi đã chọn?"
-        description={`Xoá ${selectedIds.size} đề thi?`}
-        confirmLabel="Xoá"
+        title={tr("Xoá các đề thi đã chọn?")}
+        description={tr("Xoá {0} đề thi?", selectedIds.size)}
+        confirmLabel={tr("Xoá")}
         danger
         loading={isDeleting}
         onCancel={() => setBulkDeleteOpen(false)}

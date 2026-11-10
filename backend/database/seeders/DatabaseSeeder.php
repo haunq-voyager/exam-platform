@@ -7,6 +7,7 @@ use App\Enums\ExamStatus;
 use App\Enums\QuestionStatus;
 use App\Enums\QuestionType;
 use App\Enums\UserRole;
+use App\Models\Department;
 use App\Models\Exam;
 use App\Models\Question;
 use App\Models\Subject;
@@ -28,11 +29,14 @@ class DatabaseSeeder extends Seeder
             'role' => UserRole::Admin,
         ]);
 
+        $department = Department::create(['name' => 'Khoa Công nghệ thông tin', 'code' => 'CNTT']);
+
         $teacher = User::create([
             'name' => 'Nguyễn Văn Giảng',
             'email' => 'teacher1@example.com',
             'password' => 'password',
             'role' => UserRole::Teacher,
+            'department_id' => $department->id,
         ]);
 
         User::create([
@@ -40,17 +44,35 @@ class DatabaseSeeder extends Seeder
             'email' => 'teacher2@example.com',
             'password' => 'password',
             'role' => UserRole::Teacher,
+            'department_id' => $department->id,
+        ]);
+
+        // Approvers of the default approval chain (level 1: department head of the session's department).
+        User::create([
+            'name' => 'Lê Trưởng Khoa',
+            'email' => 'truongkhoa@example.com',
+            'password' => 'password',
+            'role' => UserRole::DepartmentHead,
+            'department_id' => $department->id,
+        ]);
+
+        User::create([
+            'name' => 'Phạm Phòng Đào Tạo',
+            'email' => 'daotao@example.com',
+            'password' => 'password',
+            'role' => UserRole::TrainingOffice,
         ]);
 
         $students = collect([
-            ['name' => 'Lê Văn Học', 'email' => 'student1@example.com'],
-            ['name' => 'Phạm Thị Thi', 'email' => 'student2@example.com'],
-            ['name' => 'Hoàng Văn Sinh', 'email' => 'student3@example.com'],
+            ['name' => 'Lê Văn Học', 'email' => 'student1@example.com', 'major' => 'Công nghệ phần mềm'],
+            ['name' => 'Phạm Thị Thi', 'email' => 'student2@example.com', 'major' => 'Khoa học máy tính'],
+            ['name' => 'Hoàng Văn Sinh', 'email' => 'student3@example.com', 'major' => 'Công nghệ phần mềm'],
         ])->map(fn (array $attributes) => User::create([
             'name' => $attributes['name'],
             'email' => $attributes['email'],
             'password' => 'password',
             'role' => UserRole::Student,
+            'major' => $attributes['major'],
         ]));
 
         $subject = Subject::create([

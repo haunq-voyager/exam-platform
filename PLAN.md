@@ -74,7 +74,8 @@ Thời gian thực hiện theo đề cương: 01/08/2026 – 15/10/2026 (~10 tu�
 
 ## 5. Rủi ro / giới hạn cần nêu rõ trong báo cáo
 
-- Hệ thống chỉ **cảnh báo hỗ trợ**, không tự động kết luận gian lận hay trừ điểm.
+- Giám sát gian lận là **tuỳ chọn theo từng kỳ thi** (`proctoring_enabled`). Khi bật, mọi sự kiện cảnh báo đều đánh dấu bài làm (`is_flagged`); vượt quá `max_violations` thì bài bị nộp tự động, chấm 0 điểm (`cancel_reason = cheating`). Vì nhận diện khuôn mặt/chuyển tab có thể dương tính giả nên cần để giảng viên xem lại log (admin) trước khi công bố kết quả cuối.
+- Kỳ thi cấu hình được số lần thi (`max_attempts`) và cách tính điểm cuối (`scoring_method`: cao nhất / trung bình / lần đầu / lần cuối); bài bị hủy vẫn tính là 0 điểm trong cách tính. Đáp án chỉ hiển thị cho thí sinh khi hết lượt thi.
 - Quota API LLM miễn phí có thể giới hạn số lần demo — cần fallback/mock khi hết quota.
 - MediaPipe chạy client-side phụ thuộc thiết bị/trình duyệt của thí sinh — cần kiểm thử đa trình duyệt cơ bản (Chrome tối thiểu).
 

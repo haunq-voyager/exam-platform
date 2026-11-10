@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
+import "./ui.css";
+import { NativeValidationMessages } from "../components/NativeValidationMessages";
 import { AuthProvider } from "../lib/auth-context";
+import { I18nProvider } from "../lib/i18n-provider";
 import { ToastProvider } from "../lib/toast";
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -27,8 +30,11 @@ export default function RootLayout({
   return (
     <html lang="vi" className={beVietnamPro.variable}>
       <body>
+        <NativeValidationMessages />
         <ToastProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <I18nProvider>{children}</I18nProvider>
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>

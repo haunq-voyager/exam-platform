@@ -11,7 +11,8 @@ class ListExamsAction
 {
     public function execute(ListExamsDto $dto): LengthAwarePaginator
     {
-        $query = Exam::query()->with('creator')->withCount('examQuestions');
+        // Only reusable templates; the private exam content of a session is managed from the session itself.
+        $query = Exam::query()->where('is_template', true)->with('creator')->withCount('examQuestions');
 
         $this->applySearch($query, $dto->search);
 

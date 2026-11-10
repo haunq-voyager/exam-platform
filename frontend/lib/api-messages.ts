@@ -1,0 +1,31 @@
+import { tr } from "./i18n";
+/** Vietnamese texts for the API's `message_code`s, so users do not see the English server messages. */
+export const API_MESSAGES: Record<string, string> = {
+  get "exam_attempt.not_assigned"() { return tr("Bạn chưa được gán vào kỳ thi này."); },
+  get "exam_attempt.not_open"() { return tr("Kỳ thi hiện chưa mở hoặc đã bị tắt."); },
+  get "exam_attempt.not_started"() { return tr("Kỳ thi chưa đến giờ bắt đầu."); },
+  get "exam_attempt.ended"() { return tr("Kỳ thi đã kết thúc."); },
+  get "exam_attempt.max_attempts_reached"() { return tr("Bạn đã dùng hết số lần thi của kỳ thi này."); },
+  get "exam_attempt.expired"() { return tr("Đã hết thời gian làm bài."); },
+  get "exam_attempt.not_in_progress"() { return tr("Bài thi này đã kết thúc."); },
+  get "exam_attempt.forbidden"() { return tr("Bạn không có quyền truy cập bài thi này."); },
+  get "exam_session.no_questions"() { return tr("Đề thi chưa có câu hỏi nào, hãy thêm câu hỏi trước khi bật kỳ thi."); },
+  get "exam_session.already_ended"() { return tr("Ngày kết thúc đã qua, hãy đổi lại lịch thi trước khi bật."); },
+  get "exam_session.invalid_schedule"() { return tr("Ngày kết thúc phải sau ngày bắt đầu."); },
+  get "exam_session.exam_locked"() { return tr("Không thể sửa đề thi vì đã có thí sinh bắt đầu làm bài."); },
+  get "exam_session.not_approved"() { return tr("Kỳ thi phải được duyệt xong mới bật được."); },
+  get "approval.invalid_state"() { return tr("Trạng thái duyệt hiện tại không cho phép thao tác này."); },
+  get "approval.locked_pending"() { return tr("Kỳ thi đang chờ duyệt nên không sửa được. Hãy thu hồi yêu cầu duyệt trước."); },
+  get "approval.department_required"() { return tr("Hãy chọn khoa của kỳ thi trước khi gửi duyệt (người duyệt được xác định theo khoa)."); },
+  get "approval.not_allowed"() { return tr("Bạn không có quyền duyệt kỳ thi này ở cấp hiện tại."); },
+  get "roles.not_configurable"() { return tr("Quyền của vai trò này không thể thay đổi."); },
+  get "auth.forbidden"() { return tr("Bạn không có quyền thực hiện thao tác này."); },
+  get "auth.invalid_credentials"() { return tr("Email hoặc mật khẩu không đúng."); },
+  get "regrade_request.not_graded"() { return tr("Bài thi chưa được chấm nên chưa thể phúc khảo."); },
+  get "regrade_request.attempt_cancelled"() { return tr("Bài thi đã bị hủy do gian lận nên không thể phúc khảo."); },
+  get "regrade_request.already_pending"() { return tr("Bài thi này đã có yêu cầu phúc khảo đang chờ xử lý."); },
+  get "regrade_request.already_handled"() { return tr("Yêu cầu phúc khảo này đã được xử lý."); },
+  get "regrade_request.score_too_high"() { return tr("Điểm mới không được vượt quá tổng điểm của đề thi."); },
+  get "regrade_request.forbidden"() { return tr("Bạn không có quyền với bài thi này."); },
+  get "feedback.invalid_attempt"() { return tr("Lần thi này không thuộc về bạn hoặc không thuộc kỳ thi này."); }
+};

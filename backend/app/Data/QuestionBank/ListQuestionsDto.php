@@ -7,11 +7,12 @@ use Spatie\LaravelData\Data;
 
 class ListQuestionsDto extends Data
 {
-    private const SORTABLE_COLUMNS = ['id', 'difficulty', 'status', 'created_at'];
+    private const SORTABLE_COLUMNS = ['id', 'question_text', 'difficulty', 'status', 'created_at'];
 
     public function __construct(
         public ?string $search = null,
         public ?int $topic_id = null,
+        public ?int $subject_id = null,
         public ?array $difficulty = null,
         public ?array $status = null,
         public string $sort_by = 'created_at',
@@ -25,6 +26,7 @@ class ListQuestionsDto extends Data
         return [
             'search' => ['nullable', 'string'],
             'topic_id' => ['nullable', 'integer'],
+            'subject_id' => ['nullable', 'integer'],
             'difficulty' => ['array', 'nullable'],
             'status' => ['array', 'nullable'],
             'sort_by' => ['string', Rule::in(self::SORTABLE_COLUMNS)],
