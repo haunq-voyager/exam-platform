@@ -1,12 +1,12 @@
 # Hệ thống thi trực tuyến tích hợp AI
 
-Đồ án tốt nghiệp: hệ thống thi trực tuyến hỗ trợ AI tạo câu hỏi (Human-in-the-loop) và cảnh báo gian lận qua camera.
+Khóa luận tốt nghiệp: **Phát triển hệ thống thi trực tuyến tích hợp AI hỗ trợ tạo câu hỏi và cảnh báo gian lận qua camera** (*Developing an AI-Integrated Online Examination System with Automated Question Generation and Camera-Based Cheating Detection*). Hệ thống hỗ trợ AI tạo câu hỏi (Human-in-the-loop) và cảnh báo gian lận qua camera.
 
 - **Backend**: Laravel 13 (PHP 8.4), RESTful API, Sanctum (token auth), Spatie Laravel Data (DTO).
 - **Frontend**: Next.js 16 (App Router), TypeScript.
 - **Database**: PostgreSQL 16.
 - **AI tạo câu hỏi**: kiến trúc provider-agnostic (`AiQuestionGeneratorContract`). Ưu tiên **Anthropic Claude** khi có `ANTHROPIC_API_KEY`, dùng **Google Gemini** (free tier) khi có `GEMINI_API_KEY`, tự động rơi về **mock provider** nếu không cấu hình key nào — không cần sửa code nghiệp vụ để bật/tắt.
-- **Camera proctoring**: frontend xin quyền camera, phát hiện chuyển tab thật (Page Visibility API), và nhận diện khuôn mặt thật bằng **MediaPipe Face Detector** chạy ngay trên trình duyệt (`no_face`, `multiple_faces`) — chỉ gửi sự kiện cảnh báo về server, không truyền/lưu video.
+- **Camera proctoring**: frontend xin quyền camera, phát hiện chuyển tab thật (Page Visibility API), và nhận diện khuôn mặt thật bằng **MediaPipe** (Face Detector và Face Landmarker) chạy ngay trên trình duyệt (`no_face`, `multiple_faces`, `face_out_of_frame`, `looking_away`) — chỉ gửi sự kiện cảnh báo về server, không truyền/lưu video.
 
 ## Chạy bằng Docker
 
@@ -73,5 +73,5 @@ npm run dev
 ## Giới hạn hiện tại (đã ghi nhận trong đề cương)
 
 - AI tạo câu hỏi gọi Gemini thật khi có key; quota free tier có giới hạn số request/phút — hết quota sẽ trả lỗi rõ ràng cho giảng viên, không tự crash.
-- Chưa giới hạn quyền xem log cảnh báo camera theo giảng viên phụ trách kỳ thi cụ thể (hiện mọi admin/teacher đều xem được).
+- Nhật ký cảnh báo camera chỉ quản trị viên xem được; chưa phân theo giảng viên phụ trách kỳ thi.
 - Chưa có test tự động (unit/feature) — theo yêu cầu chỉ tạo khi được yêu cầu rõ.

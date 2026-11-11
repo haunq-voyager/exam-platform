@@ -1,6 +1,6 @@
 # Kế hoạch triển khai — Hệ thống thi trực tuyến tích hợp AI
 
-Nguồn: `DECUONGKLTN_THI_TRUC_TUYEN_AI.docx` (đề tài: *Xây dựng hệ thống thi trực tuyến tích hợp AI hỗ trợ tạo câu hỏi và cảnh báo gian lận qua camera*).
+Nguồn: `DECUONGKLTN_THI_TRUC_TUYEN_AI.docx` (đề tài: *Phát triển hệ thống thi trực tuyến tích hợp AI hỗ trợ tạo câu hỏi và cảnh báo gian lận qua camera* — *Developing an AI-Integrated Online Examination System with Automated Question Generation and Camera-Based Cheating Detection*).
 Thời gian thực hiện theo đề cương: 01/08/2026 – 15/10/2026 (~10 tuần). Sinh viên: Ngô Quang Hậu – 25550010. GVHD: ThS. Võ Tấn Khoa.
 
 ## 0. Hiện trạng repo (đã có, không làm lại)
